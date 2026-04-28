@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <com.example.koukou.widget.CodeRainView
+        android:id="@+id/code_rain_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.76"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.example.koukou.widget.ThemeAtmosphereView
+        android:id="@+id/theme_effect_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.88"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/view_top_scrim"
+        android:layout_width="0dp"
+        android:layout_height="172dp"
+        android:background="@drawable/bg_settings_header_scrim"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/glow_halo"
+        android:layout_width="420dp"
+        android:layout_height="420dp"
+        android:alpha="0.18"
+        android:background="@drawable/bg_butterfly_halo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/glow_sheen"
+        android:layout_width="360dp"
+        android:layout_height="132dp"
+        android:alpha="0.12"
+        android:background="@drawable/bg_butterfly_sheen"
+        android:rotation="-20"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/iv_decor"
+        android:layout_width="430dp"
+        android:layout_height="382dp"
+        android:layout_marginTop="-18dp"
+        android:layout_marginEnd="-88dp"
+        android:alpha="0.98"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <include layout="@layout/view_iridescent_butterfly" />
+    </FrameLayout>
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/app_bar_height"
+        android:paddingStart="@dimen/page_horizontal_padding"
+        android:paddingEnd="@dimen/page_horizontal_padding"
+        app:contentInsetStartWithNavigation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_max="@dimen/content_max_width"
+        app:title="设置"
+        app:titleTextColor="@color/butterfly_text_primary" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cv_info"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/page_horizontal_padding"
+        android:layout_marginTop="@dimen/space_sm"
+        android:layout_marginEnd="@dimen/page_horizontal_padding"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintWidth_max="@dimen/content_max_width"
+        app:strokeColor="#6C96DFFF"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:id="@+id/layout_info_surface"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_butterfly_glass_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="20dp">
+
+            <ImageView
+                android:id="@+id/iv_avatar"
+                android:layout_width="78dp"
+                android:layout_height="78dp"
+                android:background="@drawable/bg_login_gradient"
+                android:padding="2dp"
+                android:src="@mipmap/tubiao" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_md"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_nickname"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="koukou_user"
+                    android:textColor="@color/butterfly_text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_signature"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_sm"
+                    android:maxLines="2"
+                    android:text="这个人很神秘，暂未留下签名"
+                    android:textColor="@color/butterfly_text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tv_userid"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="扣扣号 0000000000"
+                    android:textColor="@color/butterfly_cyan"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_settings"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingStart="@dimen/page_horizontal_padding"
+        android:paddingTop="10dp"
+        android:paddingEnd="@dimen/page_horizontal_padding"
+        android:paddingBottom="@dimen/page_bottom_content_padding"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cv_info"
+        app:layout_constraintWidth_max="@dimen/content_max_width" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_profile"
+    android:padding="@dimen/page_horizontal_padding">
+
+    <com.example.koukou.widget.CodeRainView
+        android:id="@+id/code_rain_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.72"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.example.koukou.widget.ThemeAtmosphereView
+        android:id="@+id/theme_effect_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.86"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/iv_decor"
+        android:layout_width="388dp"
+        android:layout_height="326dp"
+        android:layout_marginTop="-12dp"
+        android:layout_marginEnd="-72dp"
+        android:alpha="0.82"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <include layout="@layout/view_iridescent_butterfly" />
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/ivBack"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_butterfly_panel"
+        android:padding="10dp"
+        android:src="@android:drawable/ic_menu_revert"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/butterfly_text_primary" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cvAvatar"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="@dimen/space_lg"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="40dp"
+        app:cardElevation="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivBack"
+        app:strokeColor="#40F3F6FC"
+        app:strokeWidth="1dp">
+
+        <ImageView
+            android:id="@+id/ivBigAvatar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/tubiao" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tvProfileNickname"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:text="昵称"
+        android:textColor="@color/butterfly_text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/tvProfileQQ"
+        app:layout_constraintStart_toEndOf="@id/cvAvatar"
+        app:layout_constraintTop_toTopOf="@id/cvAvatar"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/tvProfileQQ"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_marginTop="4dp"
+        android:text="扣扣号 0000000000"
+        android:textColor="@color/butterfly_text_secondary"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/cvAvatar"
+        app:layout_constraintStart_toEndOf="@id/cvAvatar"
+        app:layout_constraintTop_toBottomOf="@id/tvProfileNickname" />
+
+    <View
+        android:id="@+id/vDivider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="@dimen/space_lg"
+        android:background="@color/butterfly_divider"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cvAvatar" />
+
+    <LinearLayout
+        android:id="@+id/llInfoList"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_md"
+        android:background="@drawable/bg_butterfly_glass_card"
+        android:orientation="vertical"
+        android:padding="@dimen/card_inner_padding"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/vDivider">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/list_item_single_height"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="个性签名"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvSignatureDetail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="这个人很神秘，暂未留下签名"
+                android:textColor="@color/butterfly_text_primary"
+                android:textSize="14sp" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/list_item_single_height"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="举报"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="15sp" />
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_alignParentEnd="true"
+                android:src="@android:drawable/ic_menu_more"
+                app:tint="@color/butterfly_text_muted" />
+        </RelativeLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llInfoList">
+
+        <TextView
+            android:id="@+id/tvShare"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_primary_height"
+            android:layout_marginEnd="@dimen/space_sm"
+            android:background="@drawable/bg_profile_btn_outline"
+            android:gravity="center"
+            android:minWidth="88dp"
+            android:paddingHorizontal="24dp"
+            android:text="分享"
+            android:textColor="@color/butterfly_text_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvDeleteFriend"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_primary_height"
+            android:layout_marginEnd="@dimen/space_sm"
+            android:background="@drawable/bg_profile_btn_outline"
+            android:gravity="center"
+            android:minWidth="88dp"
+            android:paddingHorizontal="24dp"
+            android:text="删除好友"
+            android:textColor="@color/butterfly_danger"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvSendMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_primary_height"
+            android:background="@drawable/bg_button_gradient_20"
+            android:gravity="center"
+            android:minWidth="88dp"
+            android:paddingHorizontal="24dp"
+            android:text="发消息"
+            android:textColor="@color/butterfly_pearl"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="page_horizontal_padding">24dp</dimen>
+    <dimen name="page_top_spacing">12dp</dimen>
+    <dimen name="page_section_spacing">32dp</dimen>
+    <dimen name="page_bottom_content_padding">88dp</dimen>
+    <dimen name="content_max_width">980dp</dimen>
+    <dimen name="form_max_width">640dp</dimen>
+</resources>

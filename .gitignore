@@ -1,0 +1,34 @@
+*.iml
+.DS_Store
+
+# Gradle
+.gradle/
+build/
+app/build/
+captures/
+
+# Android Studio / IntelliJ
+.idea/
+!.idea/codeStyles
+!.idea/codeStyles/*
+!.idea/inspectionProfiles
+!.idea/inspectionProfiles/*
+
+# Local SDK / machine-specific config
+local.properties
+
+# Native / generated
+.externalNativeBuild/
+.cxx/
+
+# Logs / output packages
+*.log
+*.apk
+*.aab
+*.ap_
+output.json
+
+# Signing / secrets
+*.jks
+*.keystore
+keystore.properties

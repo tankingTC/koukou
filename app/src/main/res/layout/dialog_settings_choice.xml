@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="20dp">
+
+    <View
+        android:id="@+id/dialog_halo"
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_gravity="center"
+        android:alpha="0.3"
+        android:background="@drawable/bg_butterfly_halo" />
+
+    <View
+        android:id="@+id/dialog_sheen"
+        android:layout_width="230dp"
+        android:layout_height="96dp"
+        android:layout_gravity="top|end"
+        android:alpha="0.2"
+        android:background="@drawable/bg_butterfly_sheen"
+        android:rotation="-16" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_butterfly_glass_card"
+        android:orientation="vertical"
+        android:padding="22dp">
+
+        <TextView
+            android:id="@+id/tv_dialog_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="选择项"
+            android:textColor="@color/butterfly_text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_dialog_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="请选择一个适合当前页面的选项。"
+            android:textColor="@color/butterfly_text_secondary"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/layout_options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/btn_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_profile_btn_outline"
+            android:gravity="center"
+            android:minWidth="92dp"
+            android:paddingHorizontal="18dp"
+            android:text="取消"
+            android:textColor="@color/butterfly_text_primary"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+</FrameLayout>

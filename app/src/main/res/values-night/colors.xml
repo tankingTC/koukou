@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="butterfly_bg">#0B0F19</color>
+    <color name="butterfly_bg_soft">#141A2E</color>
+    <color name="butterfly_surface">#1A2137</color>
+    <color name="butterfly_surface_strong">#202845</color>
+    <color name="butterfly_surface_glass">#4D141A2E</color>
+    <color name="butterfly_stroke">#4F5E87</color>
+    <color name="butterfly_primary">#1E5BFF</color>
+    <color name="butterfly_purple">#7A5CFF</color>
+    <color name="butterfly_cyan">#00E6FF</color>
+    <color name="butterfly_pearl">#F3F6FC</color>
+    <color name="butterfly_text_primary">#F3F6FC</color>
+    <color name="butterfly_text_secondary">#B9C2D5</color>
+    <color name="butterfly_text_muted">#7F8AA3</color>
+    <color name="butterfly_danger">#FF6C95</color>
+    <color name="butterfly_divider">#2A3145</color>
+    <color name="md_theme_primary">#00D4FF</color>
+    <color name="md_theme_onPrimary">#FFFFFF</color>
+    <color name="md_theme_primaryContainer">#1A1A2E</color>
+    <color name="md_theme_secondary">#7B2FFF</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_background">#0D1117</color>
+    <color name="md_theme_onBackground">#E6E6E6</color>
+    <color name="md_theme_surface">#161B22</color>
+    <color name="md_theme_onSurface">#E6E6E6</color>
+    <color name="card_background">#1C1C1E</color>
+    <color name="card_border">#2D2D30</color>
+</resources>

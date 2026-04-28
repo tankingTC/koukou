@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="status_bar_design_height">24dp</dimen>
+    <dimen name="app_bar_height">56dp</dimen>
+    <dimen name="bottom_tab_height">56dp</dimen>
+    <dimen name="bottom_input_min_height">56dp</dimen>
+
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">16dp</dimen>
+    <dimen name="space_lg">24dp</dimen>
+    <dimen name="space_xl">32dp</dimen>
+    <dimen name="space_xxl">48dp</dimen>
+
+    <dimen name="page_horizontal_padding">16dp</dimen>
+    <dimen name="page_top_spacing">8dp</dimen>
+    <dimen name="page_section_spacing">24dp</dimen>
+    <dimen name="page_bottom_content_padding">72dp</dimen>
+    <dimen name="content_max_width">840dp</dimen>
+    <dimen name="form_max_width">560dp</dimen>
+
+    <dimen name="card_radius">16dp</dimen>
+    <dimen name="card_inner_padding">16dp</dimen>
+    <dimen name="card_min_height">72dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+
+    <dimen name="button_primary_height">48dp</dimen>
+    <dimen name="button_secondary_height">40dp</dimen>
+    <dimen name="button_small_height">32dp</dimen>
+    <dimen name="button_icon_size">48dp</dimen>
+
+    <dimen name="input_min_height">56dp</dimen>
+    <dimen name="input_corner_radius">12dp</dimen>
+    <dimen name="input_horizontal_padding">16dp</dimen>
+    <dimen name="input_vertical_padding">16dp</dimen>
+
+    <dimen name="list_item_single_height">56dp</dimen>
+    <dimen name="list_item_double_height">72dp</dimen>
+    <dimen name="list_item_triple_height">88dp</dimen>
+
+    <dimen name="message_bubble_max_width_ai">300dp</dimen>
+    <dimen name="message_bubble_max_width_user">280dp</dimen>
+</resources>

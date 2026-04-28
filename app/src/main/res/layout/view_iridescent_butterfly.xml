@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <View
+        android:layout_width="430dp"
+        android:layout_height="330dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="-28dp"
+        android:layout_marginEnd="-112dp"
+        android:alpha="0.34"
+        android:background="@drawable/bg_butterfly_halo"
+        android:tag="butterfly_glow" />
+
+    <View
+        android:layout_width="280dp"
+        android:layout_height="250dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="18dp"
+        android:layout_marginEnd="12dp"
+        android:alpha="0.18"
+        android:background="@drawable/bg_butterfly_ring_glass"
+        android:tag="butterfly_glow" />
+
+    <View
+        android:layout_width="84dp"
+        android:layout_height="360dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="-10dp"
+        android:layout_marginEnd="92dp"
+        android:alpha="0.56"
+        android:background="@drawable/bg_butterfly_vertical_beam"
+        android:tag="light_beam" />
+
+    <View
+        android:layout_width="268dp"
+        android:layout_height="62dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="2dp"
+        android:layout_marginBottom="38dp"
+        android:alpha="0.22"
+        android:background="@drawable/bg_butterfly_trail"
+        android:rotation="22"
+        android:tag="butterfly_glow" />
+
+    <View
+        android:layout_width="198dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="44dp"
+        android:layout_marginBottom="70dp"
+        android:alpha="0.16"
+        android:background="@drawable/bg_butterfly_trail"
+        android:rotation="14"
+        android:tag="trail_particle" />
+
+    <View
+        android:layout_width="32dp"
+        android:layout_height="116dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="52dp"
+        android:layout_marginBottom="20dp"
+        android:alpha="0.34"
+        android:background="@drawable/bg_butterfly_particle_trail"
+        android:rotation="30"
+        android:tag="trail_particle" />
+
+    <View
+        android:layout_width="26dp"
+        android:layout_height="96dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="102dp"
+        android:layout_marginBottom="42dp"
+        android:alpha="0.28"
+        android:background="@drawable/bg_butterfly_particle_trail"
+        android:rotation="20"
+        android:tag="trail_particle" />
+
+    <View
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="68dp"
+        android:layout_marginBottom="22dp"
+        android:alpha="0.38"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="spray_particle" />
+
+    <View
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="118dp"
+        android:layout_marginBottom="28dp"
+        android:alpha="0.3"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="spray_particle" />
+
+    <View
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="144dp"
+        android:layout_marginBottom="58dp"
+        android:alpha="0.24"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="particle" />
+
+    <View
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="196dp"
+        android:layout_marginTop="108dp"
+        android:alpha="0.34"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="particle" />
+
+    <View
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="58dp"
+        android:layout_marginEnd="108dp"
+        android:alpha="0.28"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="particle" />
+
+    <ImageView
+        android:layout_width="192dp"
+        android:layout_height="236dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="22dp"
+        android:layout_marginEnd="176dp"
+        android:alpha="0.22"
+        android:background="@drawable/bg_butterfly_wing_outer"
+        android:rotation="-26" />
+
+    <ImageView
+        android:layout_width="192dp"
+        android:layout_height="236dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="182dp"
+        android:alpha="0.74"
+        android:background="@drawable/bg_butterfly_wing_edge"
+        android:rotation="-26"
+        android:tag="chroma_cyan" />
+
+    <ImageView
+        android:layout_width="192dp"
+        android:layout_height="236dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="18dp"
+        android:layout_marginEnd="170dp"
+        android:alpha="0.7"
+        android:background="@drawable/bg_butterfly_wing_edge_pearl"
+        android:rotation="-26"
+        android:tag="chroma_pearl" />
+
+    <ImageView
+        android:layout_width="240dp"
+        android:layout_height="292dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="-12dp"
+        android:layout_marginEnd="2dp"
+        android:alpha="0.24"
+        android:background="@drawable/bg_butterfly_wing_outer"
+        android:rotation="13"
+        android:scaleX="-1" />
+
+    <ImageView
+        android:layout_width="240dp"
+        android:layout_height="292dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="-16dp"
+        android:layout_marginEnd="-2dp"
+        android:alpha="0.82"
+        android:background="@drawable/bg_butterfly_wing_edge"
+        android:rotation="13"
+        android:scaleX="-1"
+        android:tag="chroma_cyan" />
+
+    <ImageView
+        android:layout_width="240dp"
+        android:layout_height="292dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="-18dp"
+        android:layout_marginEnd="10dp"
+        android:alpha="0.78"
+        android:background="@drawable/bg_butterfly_wing_edge_pearl"
+        android:rotation="13"
+        android:scaleX="-1"
+        android:tag="chroma_pearl" />
+
+    <ImageView
+        android:layout_width="152dp"
+        android:layout_height="188dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="190dp"
+        android:layout_marginBottom="48dp"
+        android:alpha="0.2"
+        android:background="@drawable/bg_butterfly_wing_inner"
+        android:rotation="14" />
+
+    <ImageView
+        android:layout_width="152dp"
+        android:layout_height="188dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="194dp"
+        android:layout_marginBottom="44dp"
+        android:alpha="0.72"
+        android:background="@drawable/bg_butterfly_wing_edge_inner"
+        android:rotation="14"
+        android:tag="chroma_cyan" />
+
+    <ImageView
+        android:layout_width="152dp"
+        android:layout_height="188dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="184dp"
+        android:layout_marginBottom="52dp"
+        android:alpha="0.66"
+        android:background="@drawable/bg_butterfly_wing_edge_inner_pearl"
+        android:rotation="14"
+        android:tag="chroma_pearl" />
+
+    <ImageView
+        android:layout_width="182dp"
+        android:layout_height="226dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="18dp"
+        android:alpha="0.22"
+        android:background="@drawable/bg_butterfly_wing_inner"
+        android:rotation="-10"
+        android:scaleX="-1" />
+
+    <ImageView
+        android:layout_width="182dp"
+        android:layout_height="226dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="14dp"
+        android:alpha="0.78"
+        android:background="@drawable/bg_butterfly_wing_edge_inner"
+        android:rotation="-10"
+        android:scaleX="-1"
+        android:tag="chroma_cyan" />
+
+    <ImageView
+        android:layout_width="182dp"
+        android:layout_height="226dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="24dp"
+        android:alpha="0.72"
+        android:background="@drawable/bg_butterfly_wing_edge_inner_pearl"
+        android:rotation="-10"
+        android:scaleX="-1"
+        android:tag="chroma_pearl" />
+
+    <View
+        android:layout_width="18dp"
+        android:layout_height="158dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="96dp"
+        android:layout_marginEnd="110dp"
+        android:alpha="0.96"
+        android:background="@drawable/bg_butterfly_body" />
+
+    <View
+        android:layout_width="86dp"
+        android:layout_height="86dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="110dp"
+        android:layout_marginEnd="76dp"
+        android:alpha="1"
+        android:background="@drawable/bg_butterfly_core_glow"
+        android:tag="core_glow" />
+
+    <View
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="143dp"
+        android:layout_marginEnd="109dp"
+        android:alpha="0.88"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="core_glow" />
+
+    <View
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="66dp"
+        android:layout_marginEnd="152dp"
+        android:alpha="0.32"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="butterfly_glow" />
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="58dp"
+        android:layout_marginEnd="64dp"
+        android:alpha="0.3"
+        android:background="@drawable/bg_butterfly_glint"
+        android:tag="butterfly_glow" />
+
+</FrameLayout>
