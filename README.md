@@ -94,7 +94,3 @@ app/src/main/java/com/example/koukou
 
 - [koukou：QQ简易功能 Android App 开发设计文档.md](./koukou：QQ简易功能%20Android%20App%20开发设计文档.md)
 
-## 注意事项
-
-- `local.properties`、构建产物、签名文件不会进入 Git 仓库
-- 如果要发布到 GitHub，建议补充项目截图、License 和 issue / PR 模板
