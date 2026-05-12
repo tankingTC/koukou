@@ -5,9 +5,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.FragmentConversationsBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.shared.MainViewModelFactory;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.IridescenceAnimator;
@@ -77,11 +80,31 @@ public class ConversationsFragment extends Fragment {
             intent.putExtra(com.example.koukou.ui.chat.ChatActivity.EXTRA_TARGET_AVATAR, conversation.targetAvatarUrl);
             startActivity(intent);
             requireActivity().overridePendingTransition(com.example.koukou.R.anim.chat_open_enter, com.example.koukou.R.anim.chat_open_exit);
-        });
+        }, this::showConversationActions);
         binding.rvConversations.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvConversations.setHasFixedSize(true);
         binding.rvConversations.setAdapter(adapter);
         binding.rvConversations.setLayoutAnimation(AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_stagger_in));
+    }
+
+    private void showConversationActions(com.example.koukou.data.local.entity.ConversationEntity conversation) {
+        String pinText = conversation.isPinned ? "取消置顶" : "置顶会话";
+        String muteText = conversation.isMuted ? "取消免打扰" : "消息免打扰";
+        new AlertDialog.Builder(requireContext())
+                .setTitle(conversation.targetName != null ? conversation.targetName : conversation.targetId)
+                .setItems(new String[]{pinText, muteText, "删除会话"}, (dialog, which) -> {
+                    if (which == 0) {
+                        viewModel.setPinned(conversation.conversationId, !conversation.isPinned);
+                        Toast.makeText(requireContext(), pinText, Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        viewModel.setMuted(conversation.conversationId, !conversation.isMuted);
+                        Toast.makeText(requireContext(), muteText, Toast.LENGTH_SHORT).show();
+                    } else {
+                        viewModel.delete(conversation.conversationId);
+                        Toast.makeText(requireContext(), "会话已删除", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
     }
 
     private void observeViewModel() {
@@ -101,6 +124,9 @@ public class ConversationsFragment extends Fragment {
     private void observeAppearance() {
         settingsRepository.getSettingsLiveData().observe(getViewLifecycleOwner(), state -> {
             AppearanceManager.applyNestedPageAppearance(requireContext(), binding.getRoot(), state);
+            ThemePalette palette = AppearanceManager.paletteOf(state);
+            binding.toolbar.setTitleTextColor(palette.textPrimary);
+            binding.tvEmptyState.setTextColor(palette.textSecondary);
             binding.glowHalo.setVisibility(View.GONE);
             binding.glowSheen.setVisibility(View.GONE);
             AppearanceManager.applyEffectState(binding.glowHalo, binding.glowSheen, binding.ivDecor, state, () -> {

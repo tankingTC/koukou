@@ -32,10 +32,15 @@ public class MessageAdapter extends ListAdapter<MessageEntity, RecyclerView.View
     private final String selfAvatar;
     private final String targetName;
     private final String targetAvatar;
+    private final OnRetryClickListener retryClickListener;
     private int lastAnimatedPosition = -1;
     private final Set<String> pendingHighlightMessageIds = new HashSet<>();
 
-    public MessageAdapter(String currentUserId, String selfName, String selfAvatar, String targetName, String targetAvatar) {
+    public interface OnRetryClickListener {
+        void onRetry(MessageEntity message);
+    }
+
+    public MessageAdapter(String currentUserId, String selfName, String selfAvatar, String targetName, String targetAvatar, OnRetryClickListener retryClickListener) {
         super(new DiffUtil.ItemCallback<MessageEntity>() {
             @Override
             public boolean areItemsTheSame(@NonNull MessageEntity oldItem, @NonNull MessageEntity newItem) {
@@ -54,6 +59,7 @@ public class MessageAdapter extends ListAdapter<MessageEntity, RecyclerView.View
         this.selfAvatar = selfAvatar;
         this.targetName = targetName;
         this.targetAvatar = targetAvatar;
+        this.retryClickListener = retryClickListener;
     }
 
     @Override
@@ -205,10 +211,20 @@ public class MessageAdapter extends ListAdapter<MessageEntity, RecyclerView.View
             
             if ("sending".equals(message.status)) {
                 binding.tvStatus.setText("发送中...");
+                binding.tvStatus.setOnClickListener(null);
             } else if ("sent".equals(message.status)) {
                 binding.tvStatus.setText("已送达");
+                binding.tvStatus.setOnClickListener(null);
+            } else if ("failed".equals(message.status)) {
+                binding.tvStatus.setText("发送失败，点击重试");
+                binding.tvStatus.setOnClickListener(v -> {
+                    if (retryClickListener != null) {
+                        retryClickListener.onRetry(message);
+                    }
+                });
             } else {
                 binding.tvStatus.setText("");
+                binding.tvStatus.setOnClickListener(null);
             }
         }
     }

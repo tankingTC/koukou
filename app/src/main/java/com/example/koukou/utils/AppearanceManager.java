@@ -16,8 +16,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.settings.model.SettingsState;
 import com.example.koukou.widget.CodeRainView;
+import com.example.koukou.widget.RaindropFxView;
 import com.example.koukou.widget.ThemeAtmosphereView;
 
 import java.util.Arrays;
@@ -44,33 +46,47 @@ public final class AppearanceManager {
         return state == null ? new SettingsState() : state;
     }
 
+    /**
+     * 取当前主题对应的 {@link ThemePalette}。业务代码应优先通过 palette 字段获取颜色/背景，
+     * 而不是散落的 {@code "matrix".equals(bg) ? ...} 判断。
+     */
+    public static ThemePalette currentPalette(Context context) {
+        return ThemePalette.forState(currentState(context));
+    }
+
+    /**
+     * 基于显式 SettingsState 取 palette（无需 Context），用于 Fragment 的 observeAppearance 回调。
+     */
+    public static ThemePalette paletteOf(SettingsState state) {
+        return ThemePalette.forState(state);
+    }
+
     public static void applyPageAppearance(Context context, Window window, View root, SettingsState state) {
         if (root == null) {
             return;
         }
         SettingsState safeState = state == null ? new SettingsState() : state;
-        applyThemeMode(safeState.themeMode, safeState.chatBackground);
+        // avoid reapplying the same theme state repeatedly (expensive operations)
+        try {
+            String key = (safeState.themeMode == null ? "" : safeState.themeMode) + "|" +
+                    (safeState.chatBackground == null ? "" : safeState.chatBackground) + "|" +
+                    safeState.immersiveEffectsEnabled + "|" + (safeState.fontSize == null ? "" : safeState.fontSize);
+            Object existing = root.getTag(R.id.tag_applied_theme_hash);
+            int hash = key.hashCode();
+            if (existing instanceof Integer && ((Integer) existing) == hash) {
+                // nothing changed, skip heavy reapplication
+                return;
+            }
+            root.setTag(R.id.tag_applied_theme_hash, hash);
+        } catch (Throwable t) {
+            // ignore tagging errors and continue
+        }
+        applyThemeMode(safeState.themeMode);
         boolean lightPalette = usesLightPalette(context, safeState.themeMode, safeState.chatBackground);
         root.setBackgroundResource(resolveBackgroundRes(safeState.chatBackground, lightPalette));
         applyWindowStyle(window, root, lightPalette);
         applyTextScale(root, fontScale(safeState.fontSize));
-        View codeRainView = root.findViewById(R.id.code_rain_view);
-        View themeEffectView = root.findViewById(R.id.theme_effect_view);
-        boolean enableRain = "matrix".equals(safeState.chatBackground) && safeState.immersiveEffectsEnabled;
-        boolean enableThemeEffect = safeState.immersiveEffectsEnabled && !"matrix".equals(safeState.chatBackground);
-        if (codeRainView instanceof CodeRainView) {
-            CodeRainView rainView = (CodeRainView) codeRainView;
-            rainView.setVisibility(enableRain ? View.VISIBLE : View.GONE);
-            rainView.setLightPalette(lightPalette);
-            rainView.setRainEnabled(enableRain);
-        }
-        if (themeEffectView instanceof ThemeAtmosphereView) {
-            ThemeAtmosphereView atmosphereView = (ThemeAtmosphereView) themeEffectView;
-            atmosphereView.setVisibility(enableThemeEffect ? View.VISIBLE : View.GONE);
-            atmosphereView.setLightPalette(lightPalette);
-            atmosphereView.setMode(mapThemeEffectMode(safeState.chatBackground));
-            atmosphereView.setEffectEnabled(enableThemeEffect);
-        }
+        applyBackgroundEffects(root, safeState, lightPalette);
     }
 
     public static void applyItemAppearance(Context context, View root) {
@@ -85,13 +101,36 @@ public final class AppearanceManager {
             return;
         }
         SettingsState safeState = state == null ? new SettingsState() : state;
+        // avoid reapplying the same nested state repeatedly
+        try {
+            String key = (safeState.themeMode == null ? "" : safeState.themeMode) + "|" +
+                    (safeState.chatBackground == null ? "" : safeState.chatBackground) + "|" +
+                    safeState.immersiveEffectsEnabled + "|" + (safeState.fontSize == null ? "" : safeState.fontSize);
+            Object existing = root.getTag(R.id.tag_applied_theme_hash);
+            int hash = key.hashCode();
+            if (existing instanceof Integer && ((Integer) existing) == hash) {
+                return;
+            }
+            root.setTag(R.id.tag_applied_theme_hash, hash);
+        } catch (Throwable t) {
+            // ignore
+        }
         applyTextScale(root, fontScale(safeState.fontSize));
         root.setBackgroundColor(Color.TRANSPARENT);
         boolean lightPalette = usesLightPalette(context, safeState.themeMode, safeState.chatBackground);
+        applyBackgroundEffects(root, safeState, lightPalette);
+    }
+
+    private static void applyBackgroundEffects(View root, SettingsState safeState, boolean lightPalette) {
         View codeRainView = root.findViewById(R.id.code_rain_view);
         View themeEffectView = root.findViewById(R.id.theme_effect_view);
-        boolean enableRain = "matrix".equals(safeState.chatBackground) && safeState.immersiveEffectsEnabled;
-        boolean enableThemeEffect = safeState.immersiveEffectsEnabled && !"matrix".equals(safeState.chatBackground);
+        View raindropView = root.findViewById(R.id.raindrop_view);
+        boolean immersive = safeState.immersiveEffectsEnabled;
+        boolean enableRain = "matrix".equals(safeState.chatBackground) && immersive;
+        boolean enableRaindrop = "raindrop".equals(safeState.chatBackground) && immersive;
+        boolean enableThemeEffect = immersive
+                && !"matrix".equals(safeState.chatBackground)
+                && !"raindrop".equals(safeState.chatBackground);
         if (codeRainView instanceof CodeRainView) {
             CodeRainView rainView = (CodeRainView) codeRainView;
             rainView.setVisibility(enableRain ? View.VISIBLE : View.GONE);
@@ -105,15 +144,27 @@ public final class AppearanceManager {
             atmosphereView.setMode(mapThemeEffectMode(safeState.chatBackground));
             atmosphereView.setEffectEnabled(enableThemeEffect);
         }
+        if (raindropView instanceof RaindropFxView) {
+            RaindropFxView drop = (RaindropFxView) raindropView;
+            drop.setVisibility(enableRaindrop ? View.VISIBLE : View.GONE);
+            drop.setLightPalette(lightPalette);
+            drop.setRainEnabled(enableRaindrop);
+        }
     }
 
     public static void refreshRecyclerAppearance(Context context, RecyclerView recyclerView) {
         if (recyclerView == null) {
             return;
         }
-        for (int i = 0; i < recyclerView.getChildCount(); i++) {
-            applyItemAppearance(context, recyclerView.getChildAt(i));
+        float scale = fontScale(currentState(context).fontSize);
+        Object existing = recyclerView.getTag(R.id.tag_applied_font_scale);
+        if (existing instanceof Float && ((Float) existing) == scale) {
+            return;
         }
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            applyTextScale(recyclerView.getChildAt(i), scale);
+        }
+        recyclerView.setTag(R.id.tag_applied_font_scale, scale);
     }
 
     public static void applyEffectState(View haloView,
@@ -158,11 +209,9 @@ public final class AppearanceManager {
         }
     }
 
-    public static void applyThemeMode(String mode, String chatBackground) {
+    public static void applyThemeMode(String mode) {
         int targetMode;
-        if (usesLightPalette(null, mode, chatBackground)) {
-            targetMode = AppCompatDelegate.MODE_NIGHT_NO;
-        } else if ("light".equals(mode)) {
+        if ("light".equals(mode)) {
             targetMode = AppCompatDelegate.MODE_NIGHT_NO;
         } else if ("system".equals(mode)) {
             targetMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
@@ -191,10 +240,20 @@ public final class AppearanceManager {
         if ("minimal_white".equals(background)) {
             return true;
         }
+        if ("pink_bunny".equals(background)) {
+            return true;
+        }
         if ("stardust".equals(background)) {
             return false;
         }
         return "light".equals(mode);
+    }
+
+    private static String appearanceKey(SettingsState state) {
+        return (state.themeMode == null ? "" : state.themeMode) + "|" +
+                (state.chatBackground == null ? "" : state.chatBackground) + "|" +
+                state.immersiveEffectsEnabled + "|" +
+                (state.fontSize == null ? "" : state.fontSize);
     }
 
     private static int resolveBackgroundRes(String background, boolean lightPalette) {
@@ -204,11 +263,17 @@ public final class AppearanceManager {
         if ("minimal_white".equals(background)) {
             return R.drawable.bg_scene_minimal_white;
         }
+        if ("pink_bunny".equals(background)) {
+            return R.drawable.bg_scene_pink_bunny;
+        }
         if ("cyber".equals(background)) {
             return lightPalette ? R.drawable.bg_scene_cyber_light : R.drawable.bg_scene_cyber;
         }
         if ("matrix".equals(background)) {
             return lightPalette ? R.drawable.bg_scene_matrix_light : R.drawable.bg_scene_matrix;
+        }
+        if ("raindrop".equals(background)) {
+            return R.drawable.bg_scene_raindrop;
         }
         if ("stardust".equals(background)) {
             return R.drawable.bg_scene_stardust;
@@ -225,6 +290,9 @@ public final class AppearanceManager {
         }
         if ("stardust".equals(background)) {
             return ThemeAtmosphereView.MODE_STARDUST;
+        }
+        if ("pink_bunny".equals(background)) {
+            return ThemeAtmosphereView.MODE_BUNNY;
         }
         return ThemeAtmosphereView.MODE_BUTTERFLY;
     }
@@ -243,6 +311,15 @@ public final class AppearanceManager {
     }
 
     private static void applyTextScale(View view, float scale) {
+        // if this view already has the requested scale applied, skip recursion
+        try {
+            Object existing = view.getTag(R.id.tag_applied_font_scale);
+            if (existing instanceof Float && ((Float) existing) == scale) {
+                return;
+            }
+        } catch (Throwable t) {
+            // ignore
+        }
         if (view instanceof TextView) {
             TextView textView = (TextView) view;
             Object tag = textView.getTag(R.id.tag_base_text_size);
@@ -257,6 +334,11 @@ public final class AppearanceManager {
             for (int i = 0; i < group.getChildCount(); i++) {
                 applyTextScale(group.getChildAt(i), scale);
             }
+        }
+        try {
+            view.setTag(R.id.tag_applied_font_scale, scale);
+        } catch (Throwable t) {
+            // ignore
         }
     }
 

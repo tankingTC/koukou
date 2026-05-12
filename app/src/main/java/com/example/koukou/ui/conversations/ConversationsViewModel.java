@@ -31,6 +31,14 @@ public class ConversationsViewModel extends ViewModel {
         repository.deleteConversation(convId);
     }
 
+    public void setPinned(String convId, boolean pinned) {
+        repository.setPinned(convId, pinned);
+    }
+
+    public void setMuted(String convId, boolean muted) {
+        repository.setMuted(convId, muted);
+    }
+
     public void refreshConversations() {
         if (ownerId != null && !ownerId.isEmpty()) {
             repository.syncFromFriends(ownerId);

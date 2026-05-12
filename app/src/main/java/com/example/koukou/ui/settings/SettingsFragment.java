@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.FragmentSettingsBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.login.LoginActivity;
 import com.example.koukou.ui.settings.model.SettingsItem;
 import com.example.koukou.ui.settings.model.SettingsPage;
@@ -303,18 +304,13 @@ public class SettingsFragment extends Fragment {
     private void observeAppearance() {
         settingsRepository.getSettingsLiveData().observe(getViewLifecycleOwner(), state -> {
             AppearanceManager.applyNestedPageAppearance(requireContext(), binding.getRoot(), state);
-            boolean minimalWhite = state != null && "minimal_white".equals(state.chatBackground);
-            boolean matrix = state != null && "matrix".equals(state.chatBackground);
-            boolean stardust = state != null && "stardust".equals(state.chatBackground);
-            binding.toolbar.setTitleTextColor(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            binding.layoutInfoSurface.setBackgroundResource(minimalWhite
-                    ? R.drawable.bg_butterfly_glass_card_light
-                    : (matrix ? R.drawable.bg_butterfly_glass_card_matrix
-                    : (stardust ? R.drawable.bg_butterfly_glass_card_stardust : R.drawable.bg_butterfly_glass_card)));
-            binding.cvInfo.setStrokeColor(Color.parseColor(minimalWhite ? "#66C3D3E2" : (matrix ? "#4F86F7D7" : (stardust ? "#5ADCF6FF" : "#6C96DFFF"))));
-            binding.tvNickname.setTextColor(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            binding.tvSignature.setTextColor(Color.parseColor(minimalWhite ? "#6A778C" : (matrix ? "#A9C8BE" : (stardust ? "#C6D4EA" : "#B9C2D5"))));
-            binding.tvUserid.setTextColor(Color.parseColor(minimalWhite ? "#0B9FB5" : (stardust ? "#8FF4FF" : "#00E6FF")));
+            ThemePalette palette = AppearanceManager.paletteOf(state);
+            binding.toolbar.setTitleTextColor(palette.textPrimary);
+            binding.layoutInfoSurface.setBackgroundResource(palette.bgGlassCard);
+            binding.cvInfo.setStrokeColor(palette.cardStroke);
+            binding.tvNickname.setTextColor(palette.textPrimary);
+            binding.tvSignature.setTextColor(palette.textSecondary);
+            binding.tvUserid.setTextColor(palette.textAccent);
             binding.glowHalo.setVisibility(View.GONE);
             binding.glowSheen.setVisibility(View.GONE);
             AppearanceManager.applyEffectState(binding.glowHalo, binding.glowSheen, binding.ivDecor, state, () -> {

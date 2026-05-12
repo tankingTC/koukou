@@ -4,12 +4,14 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -25,14 +27,28 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.koukou.MainActivity;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivityLoginBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.IridescenceAnimator;
 import com.example.koukou.utils.UserHelper;
+import com.example.koukou.widget.RaindropFxView;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class LoginActivity extends AppCompatActivity {
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        try {
+            RaindropFxView.dispatchToVisible(findViewById(android.R.id.content), ev);
+        } catch (Throwable ignored) {
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     private ActivityLoginBinding binding;
     private LoginViewModel viewModel;
     private final List<UserHelper.SavedLogin> savedLogins = new ArrayList<>();
@@ -60,12 +76,13 @@ public class LoginActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this, factory).get(LoginViewModel.class);
 
         setupRegisterLauncher();
-        setupAnimations();
         setupListeners();
         observeViewModel();
         observeAppearance();
         restoreSavedAccount();
         initQuickLoginDropdown();
+        // setupAnimations 依赖 cvHistory/cvForm 可见性，必须在 initQuickLoginDropdown 之后执行
+        setupAnimations();
     }
 
     private void setupRegisterLauncher() {
@@ -96,9 +113,11 @@ public class LoginActivity extends AppCompatActivity {
                 .setInterpolator(new DecelerateInterpolator())
                 .start();
 
-        binding.cvForm.setTranslationY(-100f);
-        binding.cvForm.setAlpha(0f);
-        binding.cvForm.animate()
+        // 首屏被选中的卡片（历史 or 表单）从上方轻轻滑入
+        View introCard = binding.cvHistory.getVisibility() == View.VISIBLE ? binding.cvHistory : binding.cvForm;
+        introCard.setTranslationY(-100f);
+        introCard.setAlpha(0f);
+        introCard.animate()
                 .translationY(0f)
                 .alpha(1f)
                 .setDuration(400)
@@ -115,21 +134,114 @@ public class LoginActivity extends AppCompatActivity {
                 IridescenceAnimator.startHeroFloat(binding.ivHero);
                 IridescenceAnimator.startDreamscape(binding.ivHero);
             });
+            // glow_sheen_bottom 在新布局中是 0×0 GONE 占位 view，不再参与动画或可见性控制
             if (state == null || state.immersiveEffectsEnabled) {
-                binding.glowSheenBottom.setVisibility(View.GONE);
                 IridescenceAnimator.startButtonGlow(binding.btnLogin);
             } else {
-                binding.glowSheenBottom.setVisibility(View.GONE);
-                IridescenceAnimator.stopEffects(binding.glowSheenBottom);
                 IridescenceAnimator.stopEffects(binding.btnLogin);
             }
             AppearanceManager.refreshRecyclerAppearance(this, binding.layoutHistory.rvHistory);
+            applyPalette(AppearanceManager.paletteOf(state));
         });
     }
 
+    /**
+     * 将当前主题 palette 应用到登录页所有静态文本 / 表单控件 / 卡片背景，避免浅色主题下
+     * 出现“白底白字”对比度问题。
+     */
+    private void applyPalette(ThemePalette palette) {
+        if (palette == null) {
+            return;
+        }
+        ColorStateList primary = ColorStateList.valueOf(palette.textPrimary);
+        ColorStateList tertiary = ColorStateList.valueOf(palette.textTertiary);
+        ColorStateList stroke = ColorStateList.valueOf(palette.cardStroke);
+
+        // 品牌区文本
+        binding.tvTitle.setTextColor(palette.textPrimary);
+        binding.tvSubtitle.setTextColor(palette.textSecondary);
+        binding.tvRegister.setTextColor(palette.textSecondary);
+        binding.btnUseOther.setTextColor(palette.textPrimary);
+        binding.ivLogo.setBackgroundResource(palette.bgPanel);
+
+        // 历史卡片 / 表单卡片描边
+        binding.cvHistory.setStrokeColor(palette.cardStroke);
+        binding.cvForm.setStrokeColor(palette.cardStroke);
+
+        // 历史卡片内部背景 / 文本
+        applyCardInnerSurface(binding.cvHistory, palette);
+        applyCardInnerSurface(binding.cvForm, palette);
+
+        // 输入框：描边 / hint / 提示色
+        applyTextInputLayout(binding.tilAccount, palette, primary, tertiary, stroke);
+        applyTextInputLayout(binding.tilPassword, palette, primary, tertiary, stroke);
+
+        // ProgressBar
+        binding.pbLoading.setIndeterminateTintList(primary);
+    }
+
+    private void applyCardInnerSurface(View card, ThemePalette palette) {
+        if (!(card instanceof com.google.android.material.card.MaterialCardView)) {
+            return;
+        }
+        com.google.android.material.card.MaterialCardView cv = (com.google.android.material.card.MaterialCardView) card;
+        if (cv.getChildCount() == 0) {
+            return;
+        }
+        View inner = cv.getChildAt(0);
+        inner.setBackgroundResource(palette.bgGlassCard);
+        applyTextColors(inner, palette);
+    }
+
+    private void applyTextColors(View root, ThemePalette palette) {
+        if (root instanceof android.view.ViewGroup) {
+            android.view.ViewGroup vg = (android.view.ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                applyTextColors(vg.getChildAt(i), palette);
+            }
+        }
+        if (!(root instanceof TextView) || root instanceof com.google.android.material.button.MaterialButton) {
+            return;
+        }
+        TextView tv = (TextView) root;
+        // 根据字号区分主、副、提示三类，避免为每个 TextView 加 tag
+        float sp = tv.getTextSize() / tv.getResources().getDisplayMetrics().scaledDensity;
+        if (sp >= 16f) {
+            tv.setTextColor(palette.textPrimary);
+        } else if (sp >= 13f) {
+            tv.setTextColor(palette.textSecondary);
+        } else {
+            tv.setTextColor(palette.textTertiary);
+        }
+    }
+
+    private void applyTextInputLayout(TextInputLayout til,
+                                      ThemePalette palette,
+                                      ColorStateList primary,
+                                      ColorStateList tertiary,
+                                      ColorStateList stroke) {
+        if (til == null) {
+            return;
+        }
+        til.setBoxStrokeColor(palette.cardStroke);
+        til.setHintTextColor(tertiary);
+        til.setDefaultHintTextColor(tertiary);
+        til.setBoxBackgroundColor(Color.TRANSPARENT);
+        til.setBoxStrokeColorStateList(stroke);
+        if (til.getEditText() != null) {
+            til.getEditText().setTextColor(palette.textPrimary);
+            til.getEditText().setHintTextColor(palette.textTertiary);
+        }
+        if (til.isErrorEnabled()) {
+            // 错误色保留 Material 默认 (贤色系)，不使用 palette
+        }
+    }
+
     private void setupListeners() {
+        // 点击空白处隐藏老下拉式历史列表
         binding.getRoot().setOnClickListener(v -> hideHistoryList());
         binding.layoutHistory.cardRoot.setOnClickListener(v -> {
+            // 吞掉点击，避免穿透到根布局
         });
 
         View.OnFocusChangeListener focusListener = (v, hasFocus) -> v.animate()
@@ -150,14 +262,49 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+        // 表单账号右侧下拉仍可弹出老式历史下拉（作为 fallback）
         binding.tilAccount.setEndIconOnClickListener(v -> toggleHistoryList());
+
+        // B+C: "使用其他账号" 切换为表单输入模式
+        binding.btnUseOther.setOnClickListener(v -> showFormMode());
 
         binding.btnLogin.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
             playButtonPress(v);
             String account = textOf(binding.etAccount);
             String password = binding.etPassword.getText() == null ? "" : binding.etPassword.getText().toString();
+            // 内联验证错误优先，不再靠 Toast
+            binding.tilAccount.setError(null);
+            binding.tilPassword.setError(null);
+            if (account.isEmpty()) {
+                binding.tilAccount.setError("请输入扣扣号");
+                binding.etAccount.requestFocus();
+                return;
+            }
+            if (password.isEmpty()) {
+                binding.tilPassword.setError("请输入密码");
+                binding.etPassword.requestFocus();
+                return;
+            }
             viewModel.login(account, password);
+        });
+
+        // 输入变化时清除错误提示
+        binding.etAccount.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void afterChanged(String value) {
+                if (binding.tilAccount.getError() != null) {
+                    binding.tilAccount.setError(null);
+                }
+            }
+        });
+        binding.etPassword.addTextChangedListener(new SimpleTextWatcher() {
+            @Override
+            public void afterChanged(String value) {
+                if (binding.tilPassword.getError() != null) {
+                    binding.tilPassword.setError(null);
+                }
+            }
         });
 
         binding.tvRegister.setOnClickListener(v -> {
@@ -214,26 +361,59 @@ public class LoginActivity extends AppCompatActivity {
 
     private void initQuickLoginDropdown() {
         refreshSavedLogins();
-        historyAdapter = new HistoryAdapter(savedLogins, new HistoryAdapter.OnItemClickListener() {
+        // B+C: 点击历史账号直接登录（不再填表单）。同一个 adapter 同时服务主卸入式历史与老下拉 fallback。
+        HistoryAdapter.OnItemClickListener listener = new HistoryAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(UserHelper.SavedLogin item) {
                 binding.etAccount.setText(item.account);
-                binding.etAccount.setSelection(item.account.length());
                 binding.etPassword.setText(item.password);
-                binding.etPassword.setSelection(item.password.length());
                 hideHistoryList();
-                showTip("已填充历史账号");
+                viewModel.login(item.account, item.password);
             }
 
             @Override
             public void onDeleteClick(UserHelper.SavedLogin item, int position) {
                 deleteAccount(item, position);
             }
-        });
+        };
+        historyAdapter = new HistoryAdapter(savedLogins, listener);
 
-        RecyclerView rv = binding.layoutHistory.rvHistory;
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        rv.setAdapter(historyAdapter);
+        // 主卸入式历史列表（首屏卡片）
+        RecyclerView inline = binding.rvHistoryInline;
+        inline.setLayoutManager(new LinearLayoutManager(this));
+        inline.setAdapter(historyAdapter);
+
+        // 老下拉式（fallback）依然可用，但默认 hidden
+        RecyclerView fallback = binding.layoutHistory.rvHistory;
+        fallback.setLayoutManager(new LinearLayoutManager(this));
+        fallback.setAdapter(new HistoryAdapter(savedLogins, listener));
+
+        applyEntryMode();
+    }
+
+    /** 根据是否有历史账号选择首屏是历史卡片 / 表单卡片。 */
+    private void applyEntryMode() {
+        boolean hasHistory = !savedLogins.isEmpty();
+        binding.cvHistory.setVisibility(hasHistory ? View.VISIBLE : View.GONE);
+        binding.btnUseOther.setVisibility(hasHistory ? View.VISIBLE : View.GONE);
+        binding.cvForm.setVisibility(hasHistory ? View.GONE : View.VISIBLE);
+        binding.btnLogin.setVisibility(hasHistory ? View.GONE : View.VISIBLE);
+    }
+
+    /** 点 "使用其他账号" 后进入表单模式。 */
+    private void showFormMode() {
+        binding.cvHistory.setVisibility(View.GONE);
+        binding.btnUseOther.setVisibility(View.GONE);
+        binding.cvForm.setVisibility(View.VISIBLE);
+        binding.btnLogin.setVisibility(View.VISIBLE);
+        binding.cvForm.setAlpha(0f);
+        binding.cvForm.setTranslationY(-24f);
+        binding.cvForm.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setDuration(220)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
     }
 
     private void deleteAccount(UserHelper.SavedLogin item, int position) {
@@ -242,6 +422,8 @@ public class LoginActivity extends AppCompatActivity {
         historyAdapter.notifyItemRemoved(position);
         if (savedLogins.isEmpty()) {
             binding.layoutHistory.cardRoot.setVisibility(View.GONE);
+            // 历史清空后自动切表单模式
+            showFormMode();
         }
         showTip("已删除历史账号");
     }
@@ -278,6 +460,7 @@ public class LoginActivity extends AppCompatActivity {
         savedLogins.addAll(UserHelper.getSavedLogins(this));
         if (historyAdapter != null) {
             historyAdapter.notifyDataSetChanged();
+            applyEntryMode();
         }
     }
 
@@ -301,7 +484,18 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void showTip(String text) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        Snackbar bar = Snackbar.make(binding.getRoot(), text, Snackbar.LENGTH_SHORT);
+        ThemePalette palette = AppearanceManager.currentPalette(this);
+        View view = bar.getView();
+        view.setBackgroundColor(palette.lightPalette ? 0xEEFFFFFF : 0xCC152443);
+        TextView snackText = view.findViewById(com.google.android.material.R.id.snackbar_text);
+        if (snackText != null) {
+            snackText.setTextColor(palette.textPrimary);
+        }
+        bar.show();
     }
 
     private abstract static class SimpleTextWatcher implements android.text.TextWatcher {

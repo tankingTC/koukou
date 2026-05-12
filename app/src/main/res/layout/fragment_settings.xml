@@ -27,6 +27,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.example.koukou.widget.RaindropFxView
+        android:id="@id/raindrop_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <View
         android:id="@+id/view_top_scrim"
         android:layout_width="0dp"
@@ -91,15 +101,15 @@
         android:layout_marginTop="@dimen/space_sm"
         android:layout_marginEnd="@dimen/page_horizontal_padding"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="28dp"
+        app:cardCornerRadius="@dimen/card_radius"
         app:cardElevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintWidth_max="@dimen/content_max_width"
-        app:strokeColor="#6C96DFFF"
-        app:strokeWidth="1dp">
+        app:strokeColor="@color/butterfly_stroke_accent"
+        app:strokeWidth="@dimen/stroke_width">
 
         <LinearLayout
             android:id="@+id/layout_info_surface"
@@ -108,14 +118,12 @@
             android:background="@drawable/bg_butterfly_glass_card"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="20dp">
+            android:padding="@dimen/card_inner_padding">
 
             <ImageView
                 android:id="@+id/iv_avatar"
-                android:layout_width="78dp"
-                android:layout_height="78dp"
-                android:background="@drawable/bg_login_gradient"
-                android:padding="2dp"
+                android:layout_width="@dimen/avatar_xl"
+                android:layout_height="@dimen/avatar_xl"
                 android:src="@mipmap/tubiao" />
 
             <LinearLayout
@@ -148,7 +156,7 @@
                     android:id="@+id/tv_userid"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="@dimen/space_sm"
                     android:text="扣扣号 0000000000"
                     android:textColor="@color/butterfly_cyan"
                     android:textSize="14sp"
@@ -163,7 +171,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:paddingStart="@dimen/page_horizontal_padding"
-        android:paddingTop="10dp"
+        android:paddingTop="@dimen/space_sm"
         android:paddingEnd="@dimen/page_horizontal_padding"
         android:paddingBottom="@dimen/page_bottom_content_padding"
         app:layout_constraintBottom_toBottomOf="parent"

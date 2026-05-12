@@ -28,6 +28,20 @@
     <dimen name="button_secondary_height">40dp</dimen>
     <dimen name="button_small_height">32dp</dimen>
     <dimen name="button_icon_size">48dp</dimen>
+    <dimen name="button_primary_corner">24dp</dimen>
+    <dimen name="button_secondary_corner">20dp</dimen>
+    <dimen name="button_small_corner">16dp</dimen>
+
+    <dimen name="bubble_corner">20dp</dimen>
+    <dimen name="bubble_padding">12dp</dimen>
+
+    <dimen name="avatar_sm">32dp</dimen>
+    <dimen name="avatar_md">40dp</dimen>
+    <dimen name="avatar_lg">56dp</dimen>
+    <dimen name="avatar_xl">80dp</dimen>
+
+    <dimen name="dialog_corner">16dp</dimen>
+    <dimen name="dialog_padding">24dp</dimen>
 
     <dimen name="input_min_height">56dp</dimen>
     <dimen name="input_corner_radius">12dp</dimen>
@@ -40,4 +54,21 @@
 
     <dimen name="message_bubble_max_width_ai">300dp</dimen>
     <dimen name="message_bubble_max_width_user">280dp</dimen>
+
+    <!-- 图标尺寸（组件内部构件，可以是非 8dp 网格值，但必须走 token） -->
+    <dimen name="icon_sm">16dp</dimen>
+    <dimen name="icon_md">24dp</dimen>
+    <dimen name="icon_lg">32dp</dimen>
+
+    <!-- 未读红点 / 角标 -->
+    <dimen name="badge_min_size">20dp</dimen>
+    <dimen name="badge_padding_horizontal">6dp</dimen>
+    <dimen name="badge_padding_vertical">2dp</dimen>
+
+    <!-- 通用线宽与侧滑操作 -->
+    <dimen name="stroke_width">1dp</dimen>
+    <dimen name="swipe_action_width">80dp</dimen>
+
+    <!-- 消息列表项外部 padding（紧凑型） -->
+    <dimen name="msg_row_padding_v">4dp</dimen>
 </resources>

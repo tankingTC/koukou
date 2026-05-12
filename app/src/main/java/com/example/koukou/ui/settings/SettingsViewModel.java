@@ -41,6 +41,7 @@ public class SettingsViewModel extends ViewModel {
     public static final String KEY_SWITCH_VIBRATION = "switch_vibration";
     public static final String KEY_SWITCH_PREVIEW = "switch_preview";
     public static final String KEY_SWITCH_DND = "switch_dnd";
+    public static final String KEY_TEST_NOTIFICATION = "test_notification";
 
     public static final String KEY_THEME_MODE = "theme_mode";
     public static final String KEY_CHAT_BACKGROUND = "chat_background";
@@ -270,6 +271,7 @@ public class SettingsViewModel extends ViewModel {
                 items.add(SettingsItem.toggle(KEY_SWITCH_VIBRATION, android.R.drawable.ic_lock_idle_alarm, "震动反馈", state.vibrationEnabled ? "已开启" : "已关闭", state.vibrationEnabled));
                 items.add(SettingsItem.toggle(KEY_SWITCH_PREVIEW, android.R.drawable.ic_menu_view, "消息预览", state.messagePreviewEnabled ? "已显示" : "已隐藏", state.messagePreviewEnabled));
                 items.add(SettingsItem.toggle(KEY_SWITCH_DND, android.R.drawable.ic_lock_silent_mode, "消息免打扰", state.doNotDisturbEnabled ? "已开启" : "已关闭", state.doNotDisturbEnabled));
+                items.add(SettingsItem.action(KEY_TEST_NOTIFICATION, "发送本地测试通知", false));
                 break;
             case SettingsPage.APPEARANCE:
                 items.add(SettingsItem.title("界面风格"));
@@ -330,8 +332,14 @@ public class SettingsViewModel extends ViewModel {
         if ("matrix".equals(background)) {
             return "代码雨";
         }
+        if ("raindrop".equals(background)) {
+            return "互动雨滴";
+        }
         if ("minimal_white".equals(background)) {
             return "极简白色";
+        }
+        if ("pink_bunny".equals(background)) {
+            return "粉色兔兔";
         }
         if ("minimal".equals(background)) {
             return "极简暗调";

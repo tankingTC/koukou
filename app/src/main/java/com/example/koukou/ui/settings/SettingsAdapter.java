@@ -1,11 +1,13 @@
 package com.example.koukou.ui.settings;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 
 import androidx.annotation.NonNull;
 import androidx.core.graphics.ColorUtils;
@@ -13,8 +15,8 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.koukou.R;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.settings.model.SettingsItem;
-import com.example.koukou.ui.settings.model.SettingsState;
 import com.example.koukou.utils.AppearanceManager;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
@@ -112,19 +114,12 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         private void bind(SettingsItem item) {
             iconView.setImageResource(item.iconRes);
             titleView.setText(item.title);
-            SettingsState state = AppearanceManager.currentState(itemView.getContext());
-            boolean minimalWhite = "minimal_white".equals(state.chatBackground);
-            boolean matrix = "matrix".equals(state.chatBackground);
-            boolean stardust = "stardust".equals(state.chatBackground);
-            itemView.setBackgroundResource(minimalWhite
-                    ? R.drawable.bg_settings_row_light
-                    : (matrix ? R.drawable.bg_settings_row_matrix
-                    : (stardust ? R.drawable.bg_settings_row_stardust : R.drawable.bg_settings_row)));
-            titleView.setTextColor(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            valueView.setTextColor(Color.parseColor(minimalWhite ? "#6A778C" : (matrix ? "#A9C8BE" : (stardust ? "#C6D4EA" : "#B9C2D5"))));
-            iconView.setColorFilter(ContextCompat.getColor(itemView.getContext(),
-                    minimalWhite ? R.color.butterfly_stroke : R.color.butterfly_cyan));
-            itemView.findViewById(R.id.iv_arrow).setAlpha(minimalWhite ? 0.78f : 1f);
+            ThemePalette palette = AppearanceManager.currentPalette(itemView.getContext());
+            itemView.setBackgroundResource(palette.bgSettingsRow);
+            titleView.setTextColor(palette.textPrimary);
+            valueView.setTextColor(palette.textSecondary);
+            iconView.setColorFilter(palette.iconAccent);
+            itemView.findViewById(R.id.iv_arrow).setAlpha(palette.lightPalette ? 0.78f : 1f);
             if (item.value == null || item.value.isEmpty()) {
                 valueView.setVisibility(View.GONE);
             } else {
@@ -150,46 +145,52 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
 
         private void bind(SettingsItem item) {
-            SettingsState state = AppearanceManager.currentState(itemView.getContext());
-            boolean minimal = "minimal".equals(state.chatBackground) || "minimal_white".equals(state.chatBackground);
-            boolean minimalWhite = "minimal_white".equals(state.chatBackground);
-            boolean matrix = "matrix".equals(state.chatBackground);
-            boolean stardust = "stardust".equals(state.chatBackground);
-            itemView.setBackgroundResource(minimalWhite
-                    ? R.drawable.bg_settings_row_light
-                    : (matrix ? R.drawable.bg_settings_row_matrix
-                    : (stardust ? R.drawable.bg_settings_row_stardust : R.drawable.bg_settings_row)));
+            ThemePalette palette = AppearanceManager.currentPalette(itemView.getContext());
+            itemView.setBackgroundResource(palette.bgSettingsRow);
             iconView.setImageResource(item.iconRes);
-            iconView.setColorFilter(ContextCompat.getColor(itemView.getContext(),
-                    minimal ? R.color.butterfly_stroke : (stardust ? R.color.butterfly_cyan : R.color.butterfly_purple)));
+            iconView.setColorFilter(palette.iconAccent);
             titleView.setText(item.title);
             valueView.setText(item.value);
-            titleView.setTextColor(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            valueView.setTextColor(Color.parseColor(minimalWhite ? "#6A778C" : (matrix ? "#A9C8BE" : (stardust ? "#C6D4EA" : "#B9C2D5"))));
+            titleView.setTextColor(palette.textPrimary);
+            valueView.setTextColor(palette.textSecondary);
             switchView.setOnCheckedChangeListener(null);
             switchView.setChecked(item.checked);
-            int surfaceStrong = ContextCompat.getColor(itemView.getContext(), R.color.butterfly_surface_strong);
             int cyan = ContextCompat.getColor(itemView.getContext(), R.color.butterfly_cyan);
-            int cyanTrack = ColorUtils.setAlphaComponent(cyan, minimal ? 132 : (stardust ? 138 : 104));
-            int offTrack = Color.parseColor(minimalWhite ? "#C9D8E4" : (matrix ? "#20362F" : (stardust ? "#1A2338" : (minimal ? "#26334A" : "#202845"))));
-            int offThumb = Color.parseColor(minimalWhite ? "#EEF4F8" : (matrix ? "#99B8AE" : (stardust ? "#D5E8F8" : (minimal ? "#9EB4C8" : "#A6B0C7"))));
+            int cyanTrack = ColorUtils.setAlphaComponent(cyan, palette.switchActiveAlpha);
             switchView.setTrackTintList(new android.content.res.ColorStateList(
                     new int[][]{
                             new int[]{android.R.attr.state_checked},
                             new int[]{-android.R.attr.state_checked}
                     },
-                    new int[]{cyanTrack, offTrack}
+                    new int[]{cyanTrack, palette.switchOffTrack}
             ));
             switchView.setThumbTintList(new android.content.res.ColorStateList(
                     new int[][]{
                             new int[]{android.R.attr.state_checked},
                             new int[]{-android.R.attr.state_checked}
                     },
-                    new int[]{cyan, offThumb}
+                    new int[]{cyan, palette.switchOffThumb}
             ));
-            switchView.setElevation(minimal ? 8f : (stardust ? 6f : 2f));
+            switchView.setElevation(palette.switchElevation);
             itemView.setOnClickListener(v -> switchView.setChecked(!switchView.isChecked()));
-            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> switchChangedListener.onSwitchChanged(item, isChecked));
+            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                switchChangedListener.onSwitchChanged(item, isChecked);
+                // If this is the vibration setting and it's turned on, play a short vibration as a sample
+                if ("switch_vibration".equals(item.key) && isChecked) {
+                    Vibrator vibrator = (Vibrator) itemView.getContext().getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE));
+                            } else {
+                                vibrator.vibrate(30);
+                            }
+                        } catch (Throwable t) {
+                            // ignore vibration errors
+                        }
+                    }
+                }
+            });
         }
     }
 
@@ -202,18 +203,14 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
 
         private void bind(SettingsItem item) {
-            SettingsState state = AppearanceManager.currentState(itemView.getContext());
-            boolean minimalWhite = "minimal_white".equals(state.chatBackground);
-            boolean matrix = "matrix".equals(state.chatBackground);
-            boolean stardust = "stardust".equals(state.chatBackground);
-            actionView.setBackgroundResource(minimalWhite
-                    ? R.drawable.bg_settings_action_row_light
-                    : (matrix ? R.drawable.bg_settings_action_row_matrix
-                    : (stardust ? R.drawable.bg_settings_action_row_stardust : R.drawable.bg_settings_action_row)));
+            ThemePalette palette = AppearanceManager.currentPalette(itemView.getContext());
+            actionView.setBackgroundResource(palette.bgSettingsActionRow);
             actionView.setText(item.title);
-            actionView.setTextColor(actionView.getResources().getColor(item.destructive
-                    ? R.color.butterfly_danger
-                    : (minimalWhite ? android.R.color.black : R.color.butterfly_pearl)));
+            if (item.destructive) {
+                actionView.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.butterfly_danger));
+            } else {
+                actionView.setTextColor(palette.textPrimary);
+            }
             itemView.setOnClickListener(v -> itemClickListener.onItemClick(item));
         }
     }

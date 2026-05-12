@@ -3,10 +3,14 @@ package com.example.koukou.ui.settings;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -16,29 +20,45 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivitySettingsDetailBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.login.LoginActivity;
 import com.example.koukou.ui.settings.model.SettingsItem;
 import com.example.koukou.ui.settings.model.SettingsPage;
 import com.example.koukou.ui.settings.model.SettingsState;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.IridescenceAnimator;
+import com.example.koukou.utils.LocalNotificationHelper;
 import com.example.koukou.utils.UserHelper;
+import com.example.koukou.widget.RaindropFxView;
 
 public class SettingsDetailActivity extends AppCompatActivity {
     public static final String EXTRA_PAGE = "settings_page";
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        try {
+            RaindropFxView.dispatchToVisible(findViewById(android.R.id.content), ev);
+        } catch (Throwable ignored) {
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     private ActivitySettingsDetailBinding binding;
     private SettingsViewModel viewModel;
     private String page;
+    private ActivityResultLauncher<String> notificationPermissionLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -52,6 +72,13 @@ public class SettingsDetailActivity extends AppCompatActivity {
         }
 
         viewModel = new ViewModelProvider(this, new SettingsViewModelFactory(this, page)).get(SettingsViewModel.class);
+        notificationPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+            if (granted) {
+                sendTestNotification();
+            } else {
+                showTip("通知权限未开启");
+            }
+        });
 
         setupHeader();
         setupRecyclerView();
@@ -92,16 +119,11 @@ public class SettingsDetailActivity extends AppCompatActivity {
                 viewModel.refreshStorageStats();
             }
             AppearanceManager.applyPageAppearance(this, getWindow(), binding.getRoot(), state);
-            boolean minimalWhite = state != null && "minimal_white".equals(state.chatBackground);
-            boolean matrix = state != null && "matrix".equals(state.chatBackground);
-            boolean stardust = state != null && "stardust".equals(state.chatBackground);
-            binding.ivBack.setBackgroundResource(minimalWhite
-                    ? R.drawable.bg_butterfly_panel_light
-                    : (matrix ? R.drawable.bg_butterfly_panel_matrix
-                    : (stardust ? R.drawable.bg_butterfly_panel_stardust : R.drawable.bg_butterfly_panel)));
-            binding.ivBack.setColorFilter(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            binding.tvPageTitle.setTextColor(Color.parseColor(minimalWhite ? "#162131" : "#F3F6FC"));
-            binding.tvPageSubtitle.setTextColor(Color.parseColor(minimalWhite ? "#6A778C" : (matrix ? "#A9C8BE" : (stardust ? "#C6D4EA" : "#B9C2D5"))));
+            ThemePalette palette = AppearanceManager.paletteOf(state);
+            binding.ivBack.setBackgroundResource(palette.bgPanel);
+            binding.ivBack.setColorFilter(palette.iconPrimary);
+            binding.tvPageTitle.setTextColor(palette.textPrimary);
+            binding.tvPageSubtitle.setTextColor(palette.textSecondary);
             binding.glowHalo.setVisibility(View.GONE);
             binding.glowSheen.setVisibility(View.GONE);
             AppearanceManager.applyEffectState(binding.glowHalo, binding.glowSheen, binding.ivDecor, state, () -> {
@@ -172,8 +194,8 @@ public class SettingsDetailActivity extends AppCompatActivity {
                 showChoiceDialog(
                         "聊天背景",
                         "选择你喜欢的聊天空间氛围。",
-                        new String[]{"蝴蝶流光", "全息晶尘", "极简暗调", "极简白色", "电子科幻", "代码雨"},
-                        new String[]{"butterfly", "stardust", "minimal", "minimal_white", "cyber", "matrix"},
+                        new String[]{"蝴蝶流光", "全息晶尘", "粉色兔兔", "极简暗调", "极简白色", "电子科幻", "代码雨", "互动雨滴"},
+                        new String[]{"butterfly", "stardust", "pink_bunny", "minimal", "minimal_white", "cyber", "matrix", "raindrop"},
                         viewModel.getSettingsState().getValue() == null ? "butterfly" : viewModel.getSettingsState().getValue().chatBackground,
                         value -> {
                             viewModel.setChatBackground(value);
@@ -208,6 +230,9 @@ public class SettingsDetailActivity extends AppCompatActivity {
                 break;
             case SettingsViewModel.KEY_CLEAR_CHATS:
                 showConfirmDialog("清空聊天记录", "此操作不可恢复，确认继续吗？", "清空", true, () -> viewModel.clearChats(simpleCallback()));
+                break;
+            case SettingsViewModel.KEY_TEST_NOTIFICATION:
+                requestOrSendTestNotification();
                 break;
             case SettingsViewModel.KEY_VERSION_INFO:
                 startActivity(new Intent(this, VersionInfoActivity.class));
@@ -257,6 +282,25 @@ public class SettingsDetailActivity extends AppCompatActivity {
             showSingleInputDialog("开启本地密码", "设置一个 4 位以上的本地密码。", "输入本地密码", "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD, value ->
                     viewModel.saveLocalPasscode(value, simpleCallback()));
         }
+    }
+
+    private void requestOrSendTestNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            return;
+        }
+        sendTestNotification();
+    }
+
+    private void sendTestNotification() {
+        LocalNotificationHelper.showMessageNotification(
+                this,
+                viewModel.getSettingsState().getValue(),
+                "Koukou 本地通知",
+                "这是一条本地测试消息"
+        );
+        showTip("测试通知已发送");
     }
 
     private SettingsRepository.ResultCallback simpleCallback() {

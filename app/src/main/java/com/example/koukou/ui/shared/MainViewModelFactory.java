@@ -24,7 +24,7 @@ public class MainViewModelFactory implements ViewModelProvider.Factory {
         AppExecutors executors = AppExecutors.getInstance();
         currentUserId = UserHelper.getUserId(context);
         conversationRepo = ConversationRepository.getInstance(db.conversationDao(), db.friendDao(), db.messageDao(), executors);
-        contactRepo = ContactRepository.getInstance(db.friendDao(), db.userDao(), executors);
+        contactRepo = ContactRepository.getInstance(db.friendDao(), db.friendRequestDao(), db.userDao(), executors);
     }
 
     @NonNull

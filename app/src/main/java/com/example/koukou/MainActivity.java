@@ -1,12 +1,18 @@
 package com.example.koukou;
 
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
 import android.animation.ObjectAnimator;
 import android.animation.AnimatorSet;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -23,8 +29,10 @@ import com.example.koukou.databinding.ActivityMainBinding;
 import com.example.koukou.ui.settings.model.SettingsState;
 import com.example.koukou.network.websocket.WebSocketManager;
 import com.example.koukou.utils.AppExecutors;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.UserHelper;
+import com.example.koukou.widget.RaindropFxView;
 import com.google.android.material.badge.BadgeDrawable;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
     private SettingsRepository settingsRepository;
     private ObjectAnimator navAmbientAnimator;
     private SettingsState currentAppearanceState;
+    private BadgeDrawable conversationBadge;
+    private boolean localPasscodeUnlocked = false;
+    private boolean localPasscodeDialogShowing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +82,9 @@ public class MainActivity extends AppCompatActivity {
                 UserHelper.getNickname(this),
                 UserHelper.getAvatar(this)
         );
+        if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+            WebSocketManager.getInstance().connect(currentUserId);
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -99,15 +113,76 @@ public class MainActivity extends AppCompatActivity {
         settingsRepository.getSettingsLiveData().observe(this, state -> {
             currentAppearanceState = state;
             AppearanceManager.applyPageAppearance(this, getWindow(), binding.main, state);
+            maybeShowLocalPasscodeDialog(state);
+            ThemePalette palette = AppearanceManager.paletteOf(state);
             boolean stardust = state != null && "stardust".equals(state.chatBackground);
-            binding.bottomNav.setBackgroundResource(stardust
-                    ? R.drawable.bg_butterfly_bottom_nav_stardust
-                    : R.drawable.bg_butterfly_bottom_nav);
+            binding.bottomNav.setBackgroundResource(palette.bgBottomNav);
+            ColorStateList navTint = navTint(palette.navSelected, palette.navInactive);
+            binding.bottomNav.setItemIconTintList(navTint);
+            binding.bottomNav.setItemTextColor(navTint);
+            if (conversationBadge != null) {
+                int badgeBg = palette.navBadgeColor != 0
+                        ? palette.navBadgeColor
+                        : ContextCompat.getColor(this, R.color.butterfly_cyan);
+                conversationBadge.setBackgroundColor(badgeBg);
+                conversationBadge.setBadgeTextColor(Color.WHITE);
+            }
             binding.navAmbientGlow.setBackgroundResource(stardust
                     ? R.drawable.bg_bottom_nav_stardust_pulse
                     : R.drawable.bg_bottom_nav_ambient_glow);
-            updateBottomNavAmbientEffects(stardust && state.immersiveEffectsEnabled);
+            updateBottomNavAmbientEffects(stardust && state != null && state.immersiveEffectsEnabled);
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        maybeShowLocalPasscodeDialog(currentAppearanceState);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        try {
+            RaindropFxView.dispatchToVisible(findViewById(android.R.id.content), ev);
+        } catch (Throwable ignored) {
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private void maybeShowLocalPasscodeDialog(SettingsState state) {
+        if (state == null || !state.localPasscodeEnabled || localPasscodeUnlocked || localPasscodeDialogShowing) {
+            return;
+        }
+        String passcode = state.localPasscode == null ? "" : state.localPasscode;
+        if (passcode.isEmpty()) {
+            return;
+        }
+        localPasscodeDialogShowing = true;
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setHint("请输入本地密码");
+        input.setSingleLine(true);
+        input.setPadding((int) dp(20), (int) dp(12), (int) dp(20), (int) dp(12));
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("本地密码保护")
+                .setMessage("输入本地密码后继续使用 Koukou")
+                .setView(input)
+                .setCancelable(false)
+                .setPositiveButton("解锁", null)
+                .create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String value = input.getText().toString().trim();
+            if (passcode.equals(value)) {
+                localPasscodeUnlocked = true;
+                localPasscodeDialogShowing = false;
+                dialog.dismiss();
+            } else {
+                Toast.makeText(this, "本地密码不正确", Toast.LENGTH_SHORT).show();
+                input.setText("");
+            }
+        }));
+        dialog.setOnDismissListener(d -> localPasscodeDialogShowing = false);
+        dialog.show();
     }
 
     private void setupViewPagerAndNav() {
@@ -162,17 +237,17 @@ public class MainActivity extends AppCompatActivity {
             applyIdleNavState(selectedNavItemId);
         });
 
-        BadgeDrawable badge = binding.bottomNav.getOrCreateBadge(R.id.nav_conversations);
-        badge.setBackgroundColor(ContextCompat.getColor(this, R.color.butterfly_cyan));
-        badge.setBadgeTextColor(ContextCompat.getColor(this, R.color.butterfly_bg));
+        conversationBadge = binding.bottomNav.getOrCreateBadge(R.id.nav_conversations);
+        conversationBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.butterfly_cyan));
+        conversationBadge.setBadgeTextColor(ContextCompat.getColor(this, R.color.butterfly_bg));
         if (currentUserId != null && !currentUserId.isEmpty()) {
             convDao.getTotalUnreadCount(currentUserId).observe(this, count -> {
                 if (count != null && count > 0) {
-                    badge.setVisible(true);
-                    badge.setNumber(count);
+                    conversationBadge.setVisible(true);
+                    conversationBadge.setNumber(count);
                 } else {
-                    badge.setVisible(false);
-                    badge.clearNumber();
+                    conversationBadge.setVisible(false);
+                    conversationBadge.clearNumber();
                 }
             });
         }
@@ -353,5 +428,15 @@ public class MainActivity extends AppCompatActivity {
 
     private float dp(float value) {
         return value * getResources().getDisplayMetrics().density;
+    }
+
+    private ColorStateList navTint(int selected, int normal) {
+        return new ColorStateList(
+                new int[][]{
+                        new int[]{android.R.attr.state_checked},
+                        new int[]{-android.R.attr.state_checked}
+                },
+                new int[]{selected, normal}
+        );
     }
 }

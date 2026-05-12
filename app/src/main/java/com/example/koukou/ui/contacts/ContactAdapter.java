@@ -13,7 +13,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.koukou.R;
 import com.example.koukou.data.local.entity.UserEntity;
 import com.example.koukou.databinding.ItemContactBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.utils.AppearanceManager;
+import com.example.koukou.utils.AvatarHelper;
 
 public class ContactAdapter extends ListAdapter<UserEntity, ContactAdapter.ViewHolder> {
 
@@ -75,19 +77,11 @@ public class ContactAdapter extends ListAdapter<UserEntity, ContactAdapter.ViewH
             binding.tvName.setText(entity.nickname != null && !entity.nickname.isEmpty() ? entity.nickname : entity.userId);
             binding.tvSignature.setText(entity.signature != null && !entity.signature.isEmpty() ? entity.signature : "这个人很神秘，暂未留下签名");
 
-            if (entity.avatarUrl != null && !entity.avatarUrl.isEmpty()) {
-                int resId = binding.getRoot().getContext().getResources().getIdentifier(
-                        entity.avatarUrl, "drawable", binding.getRoot().getContext().getPackageName());
-                if (resId == 0) {
-                    resId = binding.getRoot().getContext().getResources().getIdentifier(
-                            entity.avatarUrl, "mipmap", binding.getRoot().getContext().getPackageName());
-                }
-                if (resId != 0) {
-                    binding.ivAvatar.setImageResource(resId);
-                    return;
-                }
-            }
-            binding.ivAvatar.setImageResource(R.mipmap.tubiao);
+            AvatarHelper.loadAvatar(binding.ivAvatar, entity.avatarUrl);
+            ThemePalette palette = AppearanceManager.currentPalette(binding.getRoot().getContext());
+            binding.getRoot().setBackgroundResource(palette.bgListCard);
+            binding.tvName.setTextColor(palette.textPrimary);
+            binding.tvSignature.setTextColor(palette.textSecondary);
             AppearanceManager.applyItemAppearance(binding.getRoot().getContext(), binding.getRoot());
         }
     }

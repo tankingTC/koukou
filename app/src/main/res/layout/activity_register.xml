@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    注册页（与登录页同语言：品牌 hero + 表单卡 + token 化）
+    - hero 用 percent 限宽避免小屏溢出
+    - 圆角统一：卡片 16dp / 输入 12dp / 按钮 24dp
+    - NestedScrollView 包裹，键盘弹起仍可看到注册按钮
+-->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -27,10 +33,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.example.koukou.widget.RaindropFxView
+        android:id="@id/raindrop_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <View
         android:id="@+id/glow_halo"
-        android:layout_width="360dp"
-        android:layout_height="360dp"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
         android:alpha="0.18"
         android:background="@drawable/bg_butterfly_halo"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -40,22 +56,21 @@
 
     <View
         android:id="@+id/glow_sheen_top"
-        android:layout_width="280dp"
-        android:layout_height="108dp"
-        android:alpha="0.14"
-        android:background="@drawable/bg_butterfly_sheen"
-        android:rotation="-18"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <FrameLayout
         android:id="@+id/iv_hero"
-        android:layout_width="446dp"
-        android:layout_height="384dp"
-        android:layout_marginTop="-22dp"
-        android:layout_marginEnd="-92dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_xl"
+        android:layout_marginEnd="@dimen/space_xxl"
+        android:alpha="0.92"
+        app:layout_constraintDimensionRatio="H,1.18:1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.58">
 
         <include layout="@layout/view_iridescent_butterfly" />
     </FrameLayout>
@@ -75,234 +90,254 @@
 
         <ImageView
             android:id="@+id/btn_back"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/button_icon_size"
+            android:layout_height="@dimen/button_icon_size"
             android:layout_gravity="start|center_vertical"
-            android:padding="12dp"
+            android:padding="@dimen/space_sm"
             android:rotation="180"
             android:src="@android:drawable/ic_menu_revert"
             app:tint="@color/butterfly_pearl" />
     </com.google.android.material.appbar.MaterialToolbar>
 
-    <TextView
-        android:id="@+id/tv_overline"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_xl"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.14"
-        android:text="MORPHO ACCOUNT"
-        android:textAllCaps="true"
-        android:textColor="@color/butterfly_text_secondary"
-        android:textSize="12sp"
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
 
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:fontFamily="serif"
-        android:lineSpacingExtra="-2sp"
-        android:text="CREATE&#10;A NEW LIGHT"
-        android:textColor="@color/butterfly_text_primary"
-        android:textSize="36sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_overline"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
-
-    <TextView
-        android:id="@+id/tv_desc"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_sm"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:text="设置昵称，生成专属扣扣号。"
-        android:textColor="@color/butterfly_text_secondary"
-        android:textSize="14sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_title"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
-
-    <ImageView
-        android:id="@+id/iv_logo"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_marginTop="@dimen/space_md"
-        android:background="@drawable/bg_butterfly_panel"
-        android:padding="14dp"
-        android:src="@mipmap/tubiao"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.16"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_desc" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cv_form"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_md"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="0dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/iv_logo"
-        app:layout_constraintWidth_max="@dimen/form_max_width"
-        app:strokeColor="#30F3F6FC"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_butterfly_glass_card"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:layout_height="wrap_content">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_account"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tv_overline"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:hint="昵称"
-                app:boxBackgroundColor="#4D141A2E"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:helperText="仅用于展示"
-                app:helperTextTextColor="@color/butterfly_text_muted"
-                app:hintTextColor="@color/butterfly_text_muted">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_account"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPersonName"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_koukou_id"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_md"
-                android:hint="扣扣号"
-                app:boxBackgroundColor="#4D141A2E"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:endIconDrawable="@android:drawable/ic_popup_sync"
-                app:endIconMode="custom"
-                app:endIconTint="@color/butterfly_text_secondary"
-                app:helperText="支持手动输入 10 位号码"
-                app:helperTextTextColor="@color/butterfly_text_muted"
-                app:hintTextColor="@color/butterfly_text_muted">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_koukou_id"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:maxLength="10"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_password"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_md"
-                android:hint="密码"
-                app:boxBackgroundColor="#4D141A2E"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:endIconMode="password_toggle"
-                app:endIconTint="@color/butterfly_text_secondary"
-                app:hintTextColor="@color/butterfly_text_muted">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_password"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_confirm_password"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_md"
-                android:hint="确认密码"
-                app:boxBackgroundColor="#4D141A2E"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:endIconMode="password_toggle"
-                app:endIconTint="@color/butterfly_text_secondary"
-                app:hintTextColor="@color/butterfly_text_muted">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_confirm_password"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_register"
-                android:layout_width="match_parent"
-                android:layout_height="58dp"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
                 android:layout_marginTop="@dimen/space_lg"
-                android:background="@drawable/bg_button_gradient_28"
-                android:text="注册账号"
-                android:textColor="@color/butterfly_pearl"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:backgroundTint="@null"
-                app:cornerRadius="29dp" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.14"
+                android:text="加入流光"
+                android:textAllCaps="false"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_max="@dimen/form_max_width" />
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_sm"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:fontFamily="serif"
+                android:lineSpacingExtra="-2sp"
+                android:text="创建新身份"
+                android:textColor="@color/butterfly_text_primary"
+                android:textSize="36sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_overline"
+                app:layout_constraintWidth_max="@dimen/form_max_width" />
+
+            <TextView
+                android:id="@+id/tv_desc"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_sm"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:text="设置昵称，生成专属扣扣号。"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_title"
+                app:layout_constraintWidth_max="@dimen/form_max_width" />
+
+            <ImageView
+                android:id="@+id/iv_logo"
+                android:layout_width="@dimen/avatar_lg"
+                android:layout_height="@dimen/avatar_lg"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_md"
+                android:background="@drawable/bg_butterfly_panel"
+                android:padding="@dimen/space_sm"
+                android:src="@mipmap/tubiao"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_desc" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cv_form"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_md"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="@dimen/card_radius"
+                app:cardElevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/iv_logo"
+                app:layout_constraintWidth_max="@dimen/form_max_width"
+                app:strokeColor="@color/butterfly_stroke_muted"
+                app:strokeWidth="@dimen/stroke_width">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_butterfly_glass_card"
+                    android:orientation="vertical"
+                    android:padding="@dimen/dialog_padding">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_account"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="昵称"
+                        app:boxBackgroundColor="@color/butterfly_input_bg"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:helperText="仅用于展示"
+                        app:helperTextTextColor="@color/butterfly_text_muted"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_account"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_koukou_id"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:hint="扣扣号"
+                        app:boxBackgroundColor="@color/butterfly_input_bg"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:endIconDrawable="@android:drawable/ic_popup_sync"
+                        app:endIconMode="custom"
+                        app:endIconTint="@color/butterfly_text_secondary"
+                        app:helperText="支持手动输入 10 位号码"
+                        app:helperTextTextColor="@color/butterfly_text_muted"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_koukou_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:maxLength="10"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_password"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:hint="密码"
+                        app:boxBackgroundColor="@color/butterfly_input_bg"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="@color/butterfly_text_secondary"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_confirm_password"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:hint="确认密码"
+                        app:boxBackgroundColor="@color/butterfly_input_bg"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="@color/butterfly_text_secondary"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_confirm_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_register"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/button_primary_height"
+                        android:layout_marginTop="@dimen/space_lg"
+                        android:background="@drawable/bg_button_gradient_28"
+                        android:text="注册账号"
+                        android:textColor="@color/butterfly_pearl"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@null"
+                        app:cornerRadius="@dimen/button_primary_corner" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/space_xl"
+                app:layout_constraintTop_toBottomOf="@id/cv_form" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

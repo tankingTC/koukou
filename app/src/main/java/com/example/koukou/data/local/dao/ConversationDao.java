@@ -15,7 +15,7 @@ import java.util.List;
 @Dao
 public interface ConversationDao {
 
-    @Query("SELECT * FROM conversations WHERE ownerId = :ownerId ORDER BY lastMessageTime DESC")
+    @Query("SELECT * FROM conversations WHERE ownerId = :ownerId ORDER BY isPinned DESC, lastMessageTime DESC")
     LiveData<List<ConversationEntity>> getAllConversations(String ownerId);     
 
     @Query("SELECT * FROM conversations WHERE conversationId = :id AND ownerId = :ownerId LIMIT 1")
@@ -41,6 +41,12 @@ public interface ConversationDao {
 
     @Query("UPDATE conversations SET unreadCount = 0 WHERE conversationId = :convId")
     void clearUnreadCount(String convId);
+
+    @Query("UPDATE conversations SET isPinned = :pinned WHERE conversationId = :convId")
+    void setPinned(String convId, boolean pinned);
+
+    @Query("UPDATE conversations SET isMuted = :muted WHERE conversationId = :convId")
+    void setMuted(String convId, boolean muted);
 
     @Query("SELECT SUM(unreadCount) FROM conversations WHERE ownerId = :ownerId")
     LiveData<Integer> getTotalUnreadCount(String ownerId);

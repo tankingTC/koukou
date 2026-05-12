@@ -14,25 +14,25 @@
         <LinearLayout
             android:id="@+id/ll_foreground"
             android:layout_width="wrap_content"
-            android:layout_height="76dp"
+            android:layout_height="@dimen/list_item_double_height"
             android:background="@drawable/bg_butterfly_panel"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="@dimen/space_md">
 
             <ImageView
                 android:id="@+id/iv_avatar"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="@dimen/avatar_md"
+                android:layout_height="@dimen/avatar_md"
                 android:scaleType="centerCrop"
                 android:src="@mipmap/tubiao" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="@dimen/space_sm"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -48,26 +48,27 @@
                     android:id="@+id/tv_account"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="@dimen/space_xs"
                     android:textColor="@color/butterfly_text_muted"
                     android:textSize="12sp" />
             </LinearLayout>
 
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="@dimen/icon_sm"
+                android:layout_height="@dimen/icon_sm"
+                android:contentDescription="@null"
                 android:src="@android:drawable/ic_menu_send"
                 app:tint="@color/butterfly_text_muted" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/tv_delete"
-            android:layout_width="82dp"
+            android:layout_width="@dimen/swipe_action_width"
             android:layout_height="match_parent"
-            android:background="#A8522A42"
+            android:background="@color/butterfly_swipe_delete_bg"
             android:gravity="center"
             android:text="删除"
-            android:textColor="#FFF2F6FF"
+            android:textColor="@color/butterfly_on_swipe_delete"
             android:textSize="14sp" />
 
     </LinearLayout>

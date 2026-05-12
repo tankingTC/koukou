@@ -28,6 +28,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.example.koukou.widget.RaindropFxView
+        android:id="@id/raindrop_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <FrameLayout
         android:id="@+id/iv_decor"
         android:layout_width="388dp"
@@ -43,10 +53,10 @@
 
     <ImageView
         android:id="@+id/ivBack"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="@dimen/avatar_md"
+        android:layout_height="@dimen/avatar_md"
         android:background="@drawable/bg_butterfly_panel"
-        android:padding="10dp"
+        android:padding="@dimen/space_sm"
         android:src="@android:drawable/ic_menu_revert"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -54,16 +64,15 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cvAvatar"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="@dimen/avatar_xl"
+        android:layout_height="@dimen/avatar_xl"
         android:layout_marginTop="@dimen/space_lg"
         app:cardBackgroundColor="@android:color/transparent"
         app:cardCornerRadius="40dp"
         app:cardElevation="0dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ivBack"
-        app:strokeColor="#40F3F6FC"
-        app:strokeWidth="1dp">
+        app:strokeWidth="0dp">
 
         <ImageView
             android:id="@+id/ivBigAvatar"

@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="20dp">
+    android:layout_marginHorizontal="@dimen/space_md">
 
     <View
         android:id="@+id/dialog_halo"
@@ -26,7 +26,7 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bg_butterfly_glass_card"
         android:orientation="vertical"
-        android:padding="22dp">
+        android:padding="@dimen/dialog_padding">
 
         <TextView
             android:id="@+id/tv_dialog_title"
@@ -41,7 +41,7 @@
             android:id="@+id/tv_dialog_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_sm"
             android:text="请选择一个适合当前页面的选项。"
             android:textColor="@color/butterfly_text_secondary"
             android:textSize="13sp" />
@@ -50,19 +50,19 @@
             android:id="@+id/layout_options"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="@dimen/space_md"
             android:orientation="vertical" />
 
         <TextView
             android:id="@+id/btn_cancel"
             android:layout_width="wrap_content"
-            android:layout_height="42dp"
+            android:layout_height="@dimen/button_secondary_height"
             android:layout_gravity="end"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="@dimen/space_md"
             android:background="@drawable/bg_profile_btn_outline"
             android:gravity="center"
-            android:minWidth="92dp"
-            android:paddingHorizontal="18dp"
+            android:minWidth="88dp"
+            android:paddingHorizontal="@dimen/space_md"
             android:text="取消"
             android:textColor="@color/butterfly_text_primary"
             android:textSize="14sp" />

@@ -28,4 +28,12 @@
     <color name="md_theme_onSurface">#1A2137</color>
     <color name="card_background">#FFFFFF</color>
     <color name="card_border">#D4DCE8</color>
+
+    <!-- 以下为 butterfly 默认主题的 XML 初始展示色，运行时由 ThemePalette 覆盖 -->
+    <color name="butterfly_stroke_accent">#6C96DFFF</color>
+    <color name="butterfly_stroke_muted">#30F3F6FC</color>
+    <color name="butterfly_input_bg">#4D141A2E</color>
+    <color name="butterfly_input_bg_strong">#9C152443</color>
+    <color name="butterfly_swipe_delete_bg">#A8522A42</color>
+    <color name="butterfly_on_swipe_delete">#FFF2F6FF</color>
 </resources>

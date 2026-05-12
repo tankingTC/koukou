@@ -421,6 +421,7 @@ app/src/main/java/com/example/koukou/
 
 - 蝴蝶流光
 - 全息晶尘
+- 粉色兔兔
 - 极简暗调
 - 极简白色
 - 电子科幻

@@ -24,7 +24,9 @@ public final class IridescenceAnimator {
         if (view == null) {
             return;
         }
-        cancelRegisteredAnimators(view);
+        if (!beginAnimatorGroup(view, "halo_pulse")) {
+            return;
+        }
         AnimatorSet set = new AnimatorSet();
         ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, View.SCALE_X, 0.96f, 1.08f, 0.98f);
         ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, View.SCALE_Y, 0.96f, 1.08f, 0.98f);
@@ -41,7 +43,9 @@ public final class IridescenceAnimator {
         if (view == null) {
             return;
         }
-        cancelRegisteredAnimators(view);
+        if (!beginAnimatorGroup(view, "sheen_drift")) {
+            return;
+        }
         view.setTranslationX(fromX);
         view.setTranslationY(fromY);
         view.setAlpha(fromAlpha);
@@ -62,7 +66,9 @@ public final class IridescenceAnimator {
         if (view == null) {
             return;
         }
-        cancelRegisteredAnimators(view);
+        if (!beginAnimatorGroup(view, "hero_float")) {
+            return;
+        }
         AnimatorSet set = new AnimatorSet();
         ObjectAnimator moveY = ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, 0f, -18f, 0f);
         ObjectAnimator moveX = ObjectAnimator.ofFloat(view, View.TRANSLATION_X, 0f, -8f, 0f);
@@ -79,7 +85,9 @@ public final class IridescenceAnimator {
         if (view == null) {
             return;
         }
-        cancelRegisteredAnimators(view);
+        if (!beginAnimatorGroup(view, "button_glow")) {
+            return;
+        }
         AnimatorSet set = new AnimatorSet();
         ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, View.SCALE_X, 1f, 1.018f, 1f);
         ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, View.SCALE_Y, 1f, 1.018f, 1f);
@@ -96,6 +104,10 @@ public final class IridescenceAnimator {
         if (!(root instanceof ViewGroup)) {
             return;
         }
+        if ("dreamscape".equals(root.getTag(R.id.tag_iridescence_animator_key))) {
+            return;
+        }
+        root.setTag(R.id.tag_iridescence_animator_key, "dreamscape");
         List<View> particles = new ArrayList<>();
         List<View> sprayParticles = new ArrayList<>();
         List<View> glows = new ArrayList<>();
@@ -147,6 +159,7 @@ public final class IridescenceAnimator {
             return;
         }
         cancelRegisteredAnimators(root);
+        root.setTag(R.id.tag_iridescence_animator_key, null);
         root.animate().cancel();
         if (root instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) root;
@@ -407,6 +420,16 @@ public final class IridescenceAnimator {
                 ((ObjectAnimator) animator).setRepeatMode(ObjectAnimator.RESTART);
             }
         }
+    }
+
+    private static boolean beginAnimatorGroup(View view, String key) {
+        Object existing = view.getTag(R.id.tag_iridescence_animator_key);
+        if (key.equals(existing)) {
+            return false;
+        }
+        cancelRegisteredAnimators(view);
+        view.setTag(R.id.tag_iridescence_animator_key, key);
+        return true;
     }
 
     @SuppressWarnings("unchecked")

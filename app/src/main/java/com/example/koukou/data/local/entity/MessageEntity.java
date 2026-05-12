@@ -2,14 +2,20 @@ package com.example.koukou.data.local.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
-@Entity(tableName = "messages")
+@Entity(tableName = "messages", indices = {
+        @Index("clientMessageId"),
+        @Index("serverMessageId")
+})
 public class MessageEntity {
     @PrimaryKey
     @NonNull
     public String messageId = "";
-    
+
+    public String clientMessageId;
+    public String serverMessageId;
     public String conversationId; // 关联的会话ID
     public String senderId;
     public String receiverId;
@@ -19,4 +25,7 @@ public class MessageEntity {
     public long timestamp;
     public String chatType; // "single" 或 "group"
     public String status;   // "sending", "sent", "read", "failed"
+    public boolean isRead;
+    public int retryCount;
+    public long serverTimestamp;
 }

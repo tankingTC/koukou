@@ -21,8 +21,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "WS_URL", "\"ws://10.0.2.2:8080/ws\"")
+        }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"https://api.yourdomain.com\"")
+            buildConfigField("String", "WS_URL", "\"wss://api.yourdomain.com/ws\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

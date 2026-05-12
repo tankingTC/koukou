@@ -12,8 +12,8 @@
 
     <ImageView
         android:id="@+id/iv_icon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/icon_md"
+        android:layout_height="@dimen/icon_md"
         android:tint="@color/butterfly_cyan" />
 
     <TextView
@@ -38,8 +38,8 @@
 
     <ImageView
         android:id="@+id/iv_arrow"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/icon_md"
+        android:layout_height="@dimen/icon_md"
         android:layout_marginStart="@dimen/space_sm"
         android:src="@android:drawable/ic_media_next"
         android:tint="@color/butterfly_text_muted" />

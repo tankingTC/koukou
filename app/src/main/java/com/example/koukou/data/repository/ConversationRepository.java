@@ -89,6 +89,14 @@ public class ConversationRepository {
         });
     }
 
+    public void setPinned(String convId, boolean pinned) {
+        appExecutors.diskIO().execute(() -> conversationDao.setPinned(convId, pinned));
+    }
+
+    public void setMuted(String convId, boolean muted) {
+        appExecutors.diskIO().execute(() -> conversationDao.setMuted(convId, muted));
+    }
+
     public void deleteConversation(String convId) {
         appExecutors.diskIO().execute(() -> {
             conversationDao.deleteConversation(convId);

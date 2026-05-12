@@ -9,7 +9,9 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class ThemeAtmosphereView extends View {
@@ -17,6 +19,7 @@ public class ThemeAtmosphereView extends View {
     public static final String MODE_MINIMAL = "minimal";
     public static final String MODE_CYBER = "cyber";
     public static final String MODE_STARDUST = "stardust";
+    public static final String MODE_BUNNY = "bunny";
 
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -31,10 +34,13 @@ public class ThemeAtmosphereView extends View {
     private final Random random = new Random();
     private final List<Float> seeds = new ArrayList<>();
     private final List<StardustParticle> stardustParticles = new ArrayList<>();
+    private final Map<String, Integer> colorCache = new HashMap<>();
+    // 帧率：不再使用 30fps 定时 invalidate，改为 postInvalidateOnAnimation 跟 vsync 60fps
 
     private String mode = MODE_BUTTERFLY;
     private boolean effectEnabled = false;
     private boolean lightPalette = false;
+    private boolean attachedToWindow = false;
     private long startTimeMs;
     private float density;
 
@@ -65,11 +71,12 @@ public class ThemeAtmosphereView extends View {
         gridPaint.setStyle(Paint.Style.STROKE);
         nodePaint.setStyle(Paint.Style.FILL);
         startTimeMs = System.currentTimeMillis();
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i < 32; i++) {
             seeds.add(random.nextFloat());
         }
         generateStardustField();
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
+        // 按主题性能公约：不再使用软件层，所有辉光/光晕都用同心圈几何叠加模拟，
+        // 以避免 setShadowLayer 在指令路径上的高成本。
         setAlpha(0.9f);
     }
 
@@ -90,6 +97,8 @@ public class ThemeAtmosphereView extends View {
         if (enabled) {
             startTimeMs = System.currentTimeMillis();
             invalidate();
+        } else {
+            invalidate();
         }
     }
 
@@ -109,7 +118,9 @@ public class ThemeAtmosphereView extends View {
         }
 
         float t = (System.currentTimeMillis() - startTimeMs) / 1000f;
-        if (MODE_MINIMAL.equals(mode)) {
+        if (MODE_BUNNY.equals(mode)) {
+            drawBunny(canvas, t);
+        } else if (MODE_MINIMAL.equals(mode)) {
             drawMinimal(canvas, t);
         } else if (MODE_CYBER.equals(mode)) {
             drawCyber(canvas, t);
@@ -118,7 +129,7 @@ public class ThemeAtmosphereView extends View {
         } else {
             drawButterfly(canvas, t);
         }
-        postInvalidateOnAnimation();
+        scheduleNextFrame();
     }
 
     private void drawButterfly(Canvas canvas, float t) {
@@ -143,7 +154,7 @@ public class ThemeAtmosphereView extends View {
 
         shardPaint.setStrokeWidth(dp(1.05f));
         glowPaint.setColor(withAlpha(lightPalette ? "#FFFFFF" : "#D3FFFF", 42));
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 12; i++) {
             float seed = seeds.get(i);
             float cx = getWidth() * (0.58f - (i % 6) * 0.06f + seed * 0.18f);
             float cy = getHeight() * (0.2f + (i % 8) * 0.07f);
@@ -178,6 +189,60 @@ public class ThemeAtmosphereView extends View {
                 canvas.drawLine(x + dp(4f), y - dp(2f), x + dp(18f), y - dp(10f), strokePaint);
             }
         }
+    }
+
+    private void drawBunny(Canvas canvas, float t) {
+        float w = getWidth();
+        float h = getHeight();
+        fillPaint.setColor(withAlpha("#FFFFFF", 86));
+        canvas.drawCircle(w * 0.82f, h * 0.18f, w * 0.18f, fillPaint);
+        fillPaint.setColor(withAlpha("#FFC6E0", 72));
+        canvas.drawCircle(w * 0.18f, h * 0.78f, w * 0.24f, fillPaint);
+
+        strokePaint.setStrokeCap(Paint.Cap.ROUND);
+        for (int i = 0; i < 4; i++) {
+            float baseX = w * (0.64f + i * 0.055f);
+            float baseY = h * (0.13f + i * 0.035f);
+            float sway = (float) Math.sin(t * 0.7f + i) * dp(7f);
+            strokePaint.setStrokeWidth(dp(2.2f));
+            strokePaint.setColor(withAlpha("#FF7EB8", 70 - i * 8));
+            canvas.drawOval(baseX - dp(28f) + sway, baseY - dp(54f), baseX - dp(7f) + sway, baseY + dp(18f), strokePaint);
+            canvas.drawOval(baseX + dp(7f) + sway, baseY - dp(54f), baseX + dp(28f) + sway, baseY + dp(18f), strokePaint);
+            strokePaint.setStrokeWidth(dp(1.2f));
+            strokePaint.setColor(withAlpha("#FFFFFF", 92 - i * 10));
+            canvas.drawOval(baseX - dp(22f) + sway, baseY - dp(42f), baseX - dp(12f) + sway, baseY + dp(8f), strokePaint);
+            canvas.drawOval(baseX + dp(12f) + sway, baseY - dp(42f), baseX + dp(22f) + sway, baseY + dp(8f), strokePaint);
+        }
+
+        for (int i = 0; i < 18; i++) {
+            float seed = seeds.get(i % seeds.size());
+            float x = (seed * w + t * dp(10f + i % 4 * 3f)) % (w + dp(40f)) - dp(20f);
+            float y = h * (0.12f + (i % 9) * 0.085f) + (float) Math.sin(t * 0.8f + i) * dp(8f);
+            float size = dp(3.2f + (i % 3) * 1.2f);
+            fillPaint.setColor(withAlpha(i % 2 == 0 ? "#FF7EB8" : "#FFFFFF", i % 2 == 0 ? 92 : 132));
+            drawHeart(canvas, x, y, size);
+        }
+
+        for (int i = 0; i < 12; i++) {
+            float seed = seeds.get((i + 8) % seeds.size());
+            float x = w * seed;
+            float y = h * (0.18f + i * 0.06f) + (float) Math.cos(t * 0.45f + i) * dp(10f);
+            float radius = dp(2.4f + i % 4);
+            fillPaint.setColor(withAlpha("#FFFFFF", 76));
+            canvas.drawCircle(x, y, radius, fillPaint);
+            strokePaint.setStrokeWidth(dp(0.7f));
+            strokePaint.setColor(withAlpha("#FF9DCD", 82));
+            canvas.drawCircle(x, y, radius * 1.35f, strokePaint);
+        }
+    }
+
+    private void drawHeart(Canvas canvas, float cx, float cy, float size) {
+        prismPath.reset();
+        prismPath.moveTo(cx, cy + size);
+        prismPath.cubicTo(cx - size * 2f, cy - size * 0.2f, cx - size, cy - size * 1.5f, cx, cy - size * 0.5f);
+        prismPath.cubicTo(cx + size, cy - size * 1.5f, cx + size * 2f, cy - size * 0.2f, cx, cy + size);
+        prismPath.close();
+        canvas.drawPath(prismPath, fillPaint);
     }
 
     private void drawMinimal(Canvas canvas, float t) {
@@ -308,8 +373,8 @@ public class ThemeAtmosphereView extends View {
         canvas.drawRect(0f, sweepY - dp(18f), w, sweepY, fillPaint);
 
         gridPaint.setStrokeWidth(dp(0.5f));
-        for (int i = 0; i < 80; i++) {
-            float y = i * dp(9f);
+        for (int i = 0; i < 46; i++) {
+            float y = i * dp(15f);
             gridPaint.setColor(withAlpha("#FFFFFF", 5));
             canvas.drawLine(0f, y, w, y, gridPaint);
         }
@@ -319,18 +384,11 @@ public class ThemeAtmosphereView extends View {
         float w = getWidth();
         float h = getHeight();
 
-        fillPaint.setShadowLayer(dp(46f), 0f, 0f, withAlpha("#7A5CFF", 22));
-        fillPaint.setColor(withAlpha("#7A5CFF", 18));
-        canvas.drawCircle(w * 0.84f, h * 0.18f, w * 0.18f, fillPaint);
-
-        fillPaint.setShadowLayer(dp(54f), 0f, 0f, withAlpha("#00E6FF", 18));
-        fillPaint.setColor(withAlpha("#00E6FF", 12));
-        canvas.drawCircle(w * 0.16f, h * 0.76f, w * 0.24f, fillPaint);
-
-        fillPaint.setShadowLayer(dp(30f), 0f, 0f, withAlpha("#F3F6FC", 14));
-        fillPaint.setColor(withAlpha("#F3F6FC", 8));
-        canvas.drawCircle(w * 0.52f, h * 0.42f, w * 0.12f, fillPaint);
-        fillPaint.clearShadowLayer();
+        // 三个背景色块原本用 setShadowLayer（高斯模糊）做软发光，
+        // 现改为三圈同心圆：最外圈最淡、最内圈实体，在硬件加速下成本极低。
+        drawGlowBlob(canvas, w * 0.84f, h * 0.18f, w * 0.18f, "#7A5CFF", 22, 18);
+        drawGlowBlob(canvas, w * 0.16f, h * 0.76f, w * 0.24f, "#00E6FF", 18, 12);
+        drawGlowBlob(canvas, w * 0.52f, h * 0.42f, w * 0.12f, "#F3F6FC", 14, 8);
 
         strokePaint.setStrokeCap(Paint.Cap.ROUND);
         for (int i = 0; i < 5; i++) {
@@ -369,11 +427,28 @@ public class ThemeAtmosphereView extends View {
             float py = h * (0.1f + i * 0.072f);
             float radius = dp(i % 4 == 0 ? 7f : 4.5f);
             int alpha = i % 3 == 0 ? 18 : 10;
-            fillPaint.setShadowLayer(radius * 2.6f, 0f, 0f, withAlpha(i % 2 == 0 ? "#00E6FF" : "#7A5CFF", alpha));
+            String haloColor = i % 2 == 0 ? "#00E6FF" : "#7A5CFF";
+            // 闪烁星：外圈淡光晕 + 内圈实体，代替原本的 setShadowLayer
+            fillPaint.setColor(withAlpha(haloColor, alpha));
+            canvas.drawCircle(px, py, radius * 2.2f, fillPaint);
+            fillPaint.setColor(withAlpha(haloColor, Math.max(alpha, alpha * 2)));
+            canvas.drawCircle(px, py, radius * 1.45f, fillPaint);
             fillPaint.setColor(withAlpha("#FFFFFF", alpha / 2));
             canvas.drawCircle(px, py, radius, fillPaint);
         }
-        fillPaint.clearShadowLayer();
+    }
+
+    /**
+     * 用三圈同心圆模拟 setShadowLayer 的软发光。硬件加速下成本几乎为 0，观感近似。
+     */
+    private void drawGlowBlob(Canvas canvas, float cx, float cy, float r, String rgbHex,
+                              int glowAlpha, int coreAlpha) {
+        fillPaint.setColor(withAlpha(rgbHex, Math.max(4, glowAlpha / 3)));
+        canvas.drawCircle(cx, cy, r * 1.55f, fillPaint);
+        fillPaint.setColor(withAlpha(rgbHex, Math.max(6, glowAlpha / 2)));
+        canvas.drawCircle(cx, cy, r * 1.2f, fillPaint);
+        fillPaint.setColor(withAlpha(rgbHex, coreAlpha));
+        canvas.drawCircle(cx, cy, r, fillPaint);
     }
 
     private void drawStardustParticle(Canvas canvas,
@@ -391,17 +466,21 @@ public class ThemeAtmosphereView extends View {
                 : (particle.colorSeed > 0.42f ? "#5BFFF1" : "#A892FF");
 
         if (particle.shape == 2) {
+            // 流星状：一条实体亮线 + 一条更宽的低 alpha 光晕线，代替 setShadowLayer
             float length = radius * (3.2f + particle.depth);
             float tilt = radius * (0.5f + particle.colorSeed);
-            strokePaint.setStrokeWidth(Math.max(dp(0.8f), radius * 0.42f));
-            strokePaint.setColor(withAlpha(edgeColor, coreAlpha));
-            strokePaint.setShadowLayer(radius * 2.8f, 0f, 0f, withAlpha(glowColor, glowAlpha));
+            float coreWidth = Math.max(dp(0.8f), radius * 0.42f);
+            strokePaint.setStrokeWidth(coreWidth * 2.4f);
+            strokePaint.setColor(withAlpha(glowColor, Math.max(8, glowAlpha / 2)));
             canvas.drawLine(px - length, py + tilt, px + length, py - tilt, strokePaint);
-            strokePaint.clearShadowLayer();
+            strokePaint.setStrokeWidth(coreWidth);
+            strokePaint.setColor(withAlpha(edgeColor, coreAlpha));
+            canvas.drawLine(px - length, py + tilt, px + length, py - tilt, strokePaint);
             return;
         }
 
         if (particle.shape == 1) {
+            // 菱形/棱镜：外圈光晕路径 + 主体 + 边缘描边 + 中心亮点
             prismPath.reset();
             prismPath.moveTo(px, py - radius * 1.35f);
             prismPath.lineTo(px + radius * 1.1f, py);
@@ -409,33 +488,37 @@ public class ThemeAtmosphereView extends View {
             prismPath.lineTo(px - radius * 1.1f, py);
             prismPath.close();
 
+            // 外圈“伪光晕”：同形状描宽线，低 alpha
+            strokePaint.setStrokeWidth(Math.max(dp(1.6f), radius * 0.9f));
+            strokePaint.setColor(withAlpha(glowColor, Math.max(8, glowAlpha / 2)));
+            canvas.drawPath(prismPath, strokePaint);
+
             fillPaint.setColor(withAlpha(edgeColor, Math.max(18, coreAlpha / 2)));
-            fillPaint.setShadowLayer(radius * 3.2f, 0f, 0f, withAlpha(glowColor, glowAlpha));
             canvas.drawPath(prismPath, fillPaint);
 
             strokePaint.setStrokeWidth(Math.max(dp(0.65f), radius * 0.2f));
             strokePaint.setColor(withAlpha("#F3F6FC", Math.min(180, coreAlpha + 20)));
-            strokePaint.setShadowLayer(radius * 2f, 0f, 0f, withAlpha(glowColor, glowAlpha / 2));
             canvas.drawPath(prismPath, strokePaint);
 
             fillPaint.setColor(withAlpha("#FFFFFF", Math.min(220, coreAlpha + 36)));
             canvas.drawCircle(px, py, radius * 0.25f, fillPaint);
-            fillPaint.clearShadowLayer();
-            strokePaint.clearShadowLayer();
             return;
         }
 
+        // 默认圆点：低 alpha 外光晕 + 中间光晕 + 主体 + 中心高亮
+        fillPaint.setColor(withAlpha(glowColor, Math.max(6, glowAlpha / 3)));
+        canvas.drawCircle(px, py, radius * 2.0f, fillPaint);
+        fillPaint.setColor(withAlpha(glowColor, Math.max(8, glowAlpha / 2)));
+        canvas.drawCircle(px, py, radius * 1.4f, fillPaint);
         fillPaint.setColor(withAlpha(edgeColor, Math.min(210, coreAlpha)));
-        fillPaint.setShadowLayer(radius * 3.4f, 0f, 0f, withAlpha(glowColor, glowAlpha));
         canvas.drawCircle(px, py, radius, fillPaint);
         fillPaint.setColor(withAlpha("#FFFFFF", Math.min(240, coreAlpha + 28)));
         canvas.drawCircle(px, py, radius * 0.34f, fillPaint);
-        fillPaint.clearShadowLayer();
     }
 
     private void generateStardustField() {
         stardustParticles.clear();
-        for (int i = 0; i < 92; i++) {
+        for (int i = 0; i < 56; i++) {
             float depth = random.nextFloat();
             stardustParticles.add(new StardustParticle(
                     0.02f + random.nextFloat() * 0.96f,
@@ -491,13 +574,49 @@ public class ThemeAtmosphereView extends View {
     }
 
     private int withAlpha(String colorString, int alpha) {
-        int base = Color.parseColor(colorString);
+        Integer cached = colorCache.get(colorString);
+        int base = cached != null ? cached : Color.parseColor(colorString);
+        if (cached == null) {
+            colorCache.put(colorString, base);
+        }
         return Color.argb(
                 Math.max(0, Math.min(255, alpha)),
                 Color.red(base),
                 Color.green(base),
                 Color.blue(base)
         );
+    }
+
+    private void scheduleNextFrame() {
+        if (effectEnabled && attachedToWindow && getVisibility() == VISIBLE && isShown()) {
+            // 与屏幕刷新率对齐，争取 60fps 的流畅观感
+            postInvalidateOnAnimation();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        attachedToWindow = true;
+        if (effectEnabled) {
+            startTimeMs = System.currentTimeMillis();
+            invalidate();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        attachedToWindow = false;
+        super.onDetachedFromWindow();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == VISIBLE && effectEnabled) {
+            startTimeMs = System.currentTimeMillis();
+            invalidate();
+        }
     }
 
     private float dp(float value) {

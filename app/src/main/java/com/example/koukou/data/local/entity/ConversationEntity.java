@@ -18,4 +18,5 @@ public class ConversationEntity {
     public long lastMessageTime;
     public int unreadCount;
     public boolean isPinned;
+    public boolean isMuted;
 }

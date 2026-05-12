@@ -1,6 +1,7 @@
 package com.example.koukou.ui.chat;
 
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -21,12 +22,22 @@ import com.example.koukou.databinding.ActivityChatBinding;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.IridescenceAnimator;
 import com.example.koukou.utils.UserHelper;
+import com.example.koukou.widget.RaindropFxView;
 import com.example.koukou.ui.settings.model.SettingsState;
 
 public class ChatActivity extends AppCompatActivity {
     public static final String EXTRA_TARGET_ID = "target_id";
     public static final String EXTRA_TARGET_NAME = "target_name";
     public static final String EXTRA_TARGET_AVATAR = "target_avatar";
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        try {
+            RaindropFxView.dispatchToVisible(findViewById(android.R.id.content), ev);
+        } catch (Throwable ignored) {
+        }
+        return super.dispatchTouchEvent(ev);
+    }
 
     private ActivityChatBinding binding;
     private ChatViewModel viewModel;
@@ -132,7 +143,11 @@ public class ChatActivity extends AppCompatActivity {
                 UserHelper.getNickname(this),
                 UserHelper.getAvatar(this),
                 targetName,
-                targetAvatar
+                targetAvatar,
+                message -> {
+                    viewModel.retryMessage(message.messageId);
+                    showTip("正在重试发送");
+                }
         );
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true);
@@ -217,20 +232,17 @@ public class ChatActivity extends AppCompatActivity {
                 IridescenceAnimator.stopEffects(binding.btnSend);
             }
             updateInputSurface(binding.etInput.hasFocus());
-            binding.layoutEmojiPanel.setBackgroundResource(state != null && "stardust".equals(state.chatBackground)
-                    ? R.drawable.bg_butterfly_panel_stardust
-                    : R.drawable.bg_butterfly_panel);
+            binding.layoutEmojiPanel.setBackgroundResource(AppearanceManager.paletteOf(state).bgPanel);
             AppearanceManager.refreshRecyclerAppearance(this, binding.rvMessages);
             AppearanceManager.refreshRecyclerAppearance(this, binding.rvEmojis);
         });
     }
 
     private void updateInputSurface(boolean focused) {
+        com.example.koukou.theme.ThemePalette palette = AppearanceManager.paletteOf(currentAppearanceState);
         boolean stardust = currentAppearanceState != null && "stardust".equals(currentAppearanceState.chatBackground);
         boolean active = stardust && currentAppearanceState.immersiveEffectsEnabled && focused;
-        binding.layoutInput.setBackgroundResource(active
-                ? R.drawable.bg_butterfly_input_bar_stardust_active
-                : (stardust ? R.drawable.bg_butterfly_input_bar_stardust : R.drawable.bg_butterfly_input_bar));
+        binding.layoutInput.setBackgroundResource(active ? palette.bgInputBarActive : palette.bgInputBar);
         
         if (focused && active) {
             IridescenceAnimator.startInputEdgeTrace(binding.layoutInput);

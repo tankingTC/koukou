@@ -1,5 +1,6 @@
 package com.example.koukou.ui.conversations;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.koukou.data.local.entity.ConversationEntity;
 import com.example.koukou.databinding.ItemConversationBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.AvatarHelper;
 
@@ -22,10 +24,15 @@ public class ConversationAdapter extends ListAdapter<ConversationEntity, Convers
         void onClick(ConversationEntity conversation);
     }
 
+    public interface OnConversationLongClickListener {
+        void onLongClick(ConversationEntity conversation);
+    }
+
     private final OnConversationClickListener listener;
+    private final OnConversationLongClickListener longClickListener;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
 
-    public ConversationAdapter(OnConversationClickListener listener) {
+    public ConversationAdapter(OnConversationClickListener listener, OnConversationLongClickListener longClickListener) {
         super(new DiffUtil.ItemCallback<ConversationEntity>() {
             @Override
             public boolean areItemsTheSame(@NonNull ConversationEntity oldItem, @NonNull ConversationEntity newItem) {
@@ -38,10 +45,13 @@ public class ConversationAdapter extends ListAdapter<ConversationEntity, Convers
                        oldItem.unreadCount == newItem.unreadCount &&
                        java.util.Objects.equals(oldItem.lastMessage, newItem.lastMessage) &&
                        java.util.Objects.equals(oldItem.targetName, newItem.targetName) &&
-                       java.util.Objects.equals(oldItem.targetAvatarUrl, newItem.targetAvatarUrl);
+                       java.util.Objects.equals(oldItem.targetAvatarUrl, newItem.targetAvatarUrl) &&
+                       oldItem.isPinned == newItem.isPinned &&
+                       oldItem.isMuted == newItem.isMuted;
             }
         });
         this.listener = listener;
+        this.longClickListener = longClickListener;
     }
 
     @NonNull
@@ -74,11 +84,20 @@ public class ConversationAdapter extends ListAdapter<ConversationEntity, Convers
                             }).start();
                 }
             });
+            binding.getRoot().setOnLongClickListener(v -> {
+                int position = getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION && longClickListener != null) {
+                    longClickListener.onLongClick(getItem(position));
+                    return true;
+                }
+                return false;
+            });
         }
 
         void bind(ConversationEntity entity) {
             AvatarHelper.loadAvatar(binding.ivAvatar, entity.targetAvatarUrl);
-            binding.tvName.setText(entity.targetName != null ? entity.targetName : entity.targetId);
+            String prefix = (entity.isPinned ? "📌 " : "") + (entity.isMuted ? "🔕 " : "");
+            binding.tvName.setText(prefix + (entity.targetName != null ? entity.targetName : entity.targetId));
             binding.tvLastMessage.setText(entity.lastMessage != null && !entity.lastMessage.isEmpty() ? entity.lastMessage : "点击开始聊天");
             
             if (entity.lastMessageTime > 0) {
@@ -94,21 +113,13 @@ public class ConversationAdapter extends ListAdapter<ConversationEntity, Convers
                 binding.tvUnread.setVisibility(View.GONE);
             }
 
-            if (entity.targetAvatarUrl != null) {
-                int resId = binding.getRoot().getContext().getResources().getIdentifier(
-                        entity.targetAvatarUrl, "drawable", binding.getRoot().getContext().getPackageName());
-                if (resId == 0) {
-                    resId = binding.getRoot().getContext().getResources().getIdentifier(
-                            entity.targetAvatarUrl, "mipmap", binding.getRoot().getContext().getPackageName());
-                }
-                if (resId != 0) {
-                    binding.ivAvatar.setImageResource(resId);
-                } else {
-                    binding.ivAvatar.setImageResource(com.example.koukou.R.mipmap.tubiao);
-                }
-            } else {
-                binding.ivAvatar.setImageResource(com.example.koukou.R.mipmap.tubiao);
-            }
+            ThemePalette palette = AppearanceManager.currentPalette(binding.getRoot().getContext());
+            binding.getRoot().setBackgroundResource(palette.bgListCard);
+            binding.tvName.setTextColor(palette.textPrimary);
+            binding.tvLastMessage.setTextColor(palette.textSecondary);
+            binding.tvTime.setTextColor(palette.textTertiary);
+            binding.tvUnread.setBackgroundResource(palette.bgUnreadBadge);
+            binding.tvUnread.setTextColor(Color.WHITE);
             AppearanceManager.applyItemAppearance(binding.getRoot().getContext(), binding.getRoot());
         }
     }

@@ -83,6 +83,7 @@ app/src/main/java/com/example/koukou
 
 - 蝴蝶流光
 - 全息晶尘
+- 粉色兔兔
 - 电子科幻
 - 代码雨
 - 极简暗调

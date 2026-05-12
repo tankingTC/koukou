@@ -1,391 +1,618 @@
-四、Android布局适配规范
-4.1 屏幕尺寸适配策略
-4.1.1 目标设备范围
+# koukou Android 布局与样式规范  v2.0
 
-设备类型	屏幕尺寸	分辨率	密度	设计基准
-小屏手机	5.0"-5.5"	720×1280	mdpi/hdpi	最小适配
-标准手机	5.5"-6.2"	1080×1920	xhdpi/xxhdpi	主设计基准
-大屏手机	6.2"-6.9"	1440×2880	xxhdpi/xxxhdpi	扩展适配
-折叠屏/平板	7.0"+	2208×1840+	xhdpi	双栏布局
-4.1.2 响应式布局原则
+适用对象：koukou IM（仿 QQ 风格即时通讯练手项目，包名 com.example.koukou）。
+本规范与下列文件双向对齐，任何尺寸/颜色变更应同步修改本文件以避免漂移：
+  - 尺寸 token： app/src/main/res/values/dimens.xml + values-sw600dp/dimens.xml
+  - 主题契约： app/src/main/java/com/example/koukou/theme/ThemePalette.java
+  - 性能铁律： 扩展.md  §9.5
 
-使用 ConstraintLayout 作为根布局，确保组件相对定位
-使用 dp 而非 px，确保不同密度屏幕显示一致
-使用 sp 设置文字大小，尊重用户字体设置
-百分比布局：关键组件宽度使用百分比（如卡片宽度 90%）
-最小/最大尺寸约束：设置 minWidth/maxWidth 防止极端情况
-4.1.3 屏幕宽度断点
+变更历史：
+  v1.0  2026-04  初版（基于 Aura 助手 app 设计稿，与 koukou 实际页面部分脱节）
+  v2.0  2026-05  完全对齐 koukou 当前实现；引入 dimens token、ThemePalette、登录历史模式、
+                 Snackbar+内联错误规范、动效预算、性能铁律、可访问性约束。
 
-窄屏 (< 360dp)    : 单列紧凑布局
-标准 (360-411dp)  : 标准布局（主设计基准）
-宽屏 (411-600dp)  : 增大边距和卡片尺寸
-大屏 (> 600dp)    : 考虑双栏布局
+================================================================================
+0. 总则 — 三条铁律
+================================================================================
 
-4.2 通用组件尺寸规范
-4.2.1 状态栏与导航栏
+铁律 1： **dp 数值必须引用 @dimen/ token，禁止裸 dp**
+  禁止 ✗  android:layout_margin="20dp"
+  允许 ✓  android:layout_margin="@dimen/space_md"
+  例外    装饰艺术资产（如 view_iridescent_butterfly.xml 蝴蝶光翼），按设计稿摆放豁免。
 
-组件	高度	说明
-状态栏	24dp	系统状态栏区域（时间、信号、电量）
-AppBar（顶部栏）	56dp	包含标题和操作按钮
-底部Tab导航	56dp	4个Tab图标+文字
-底部输入区域	最小56dp	动态高度，随输入框扩展
-4.2.2 间距规范（8dp网格系统）
+铁律 2： **颜色必须用 ThemePalette 字段或 palette 驱动的 drawable，禁止硬编码 #RRGGBB**
+  禁止 ✗  android:textColor="#FFFFFF"
+  允许 ✓  textView.setTextColor(palette.textPrimary)
+  XML 中可保留 @color/butterfly_text_primary 作为初始展示态，
+  但 observeAppearance 必须用 palette 覆盖，否则切到浅色主题会"白底白字"。
 
-类型	尺寸	使用场景
-极小间距	4dp	图标与文字间距
-小间距	8dp	同组元素间距
-标准间距	16dp	卡片内边距、列表项间距
-中等间距	24dp	模块间间距
-大间距	32dp	页面顶部/底部留白
-超大间距	48dp	主要功能区分隔
-4.2.3 卡片组件规范
+铁律 3： **间距严格遵循 8dp 网格，组件内部尺寸可豁免但必须走 token**
+  a) 间距（layout_margin* / padding*，元素之间的留白）严格 8dp 网格：
+        允许    4 / 8 / 16 / 24 / 32 / 48 dp（即 space_xs..space_xxl）
+        禁止    3 / 6 / 10 / 14 / 18 / 22 / 28 / 36 dp 等裸"半步"值
+  b) 组件内部构件（圆角、icon 尺寸、badge 尺寸等）不受网格约束，
+     但**必须通过 dimens.xml token 声明**，禁止散布裸 dp：
+        合规 ✓   input_corner_radius=12dp、bubble_padding=12dp、
+                 button_secondary_corner=20dp、bubble_corner=20dp、
+                 icon_sm=16dp、badge_min_size=20dp
+        违规 ✗   XML 里直接写 android:layout_width="22dp"
+  c) 装饰艺术资产（view_iridescent_butterfly 等）完全豁免网格与 token 要求。
+  历史     迁移前布局存在 200+ 处 10/14/18/22/28dp，已全部消除。
 
-┌─────────────────────────────────────┐
-│ ← 16dp →                    ← 16dp →│
-│  ┌─────────────────────────────┐   │
-│  │ ← 16dp 内边距 →             │   │
-│  │                             │   │
-│  │      卡片内容区域           │   │
-│  │      最小高度: 72dp         │   │
-│  │                             │   │
-│  └─────────────────────────────┘   │
-│                                     │
-│  卡片宽度: match_parent - 32dp     │
-│  卡片圆角: 16dp                    │
-│  卡片阴影: elevation 4dp           │
-│  卡片背景: #1C1C1E + 20%透明度     │
-└─────────────────────────────────────┘
-4.2.4 按钮规范
+================================================================================
+1. 设计 token （res/values/dimens.xml）
+================================================================================
 
-类型	高度	最小宽度	圆角	内边距
-主要按钮	48dp	88dp	24dp	水平24dp
-次要按钮	40dp	72dp	20dp	水平16dp
-小型按钮	32dp	64dp	16dp	水平12dp
-图标按钮	48dp	48dp	圆形	12dp
-FAB	56dp	56dp	28dp	-
-4.2.5 输入框规范
+1.1 间距（8dp 网格）
 
-┌─────────────────────────────────────┐
-│  标签文字 (12sp, #8B949E)           │
-│  ┌─────────────────────────────┐   │
-│  │ 输入内容 (16sp)             │   │ ← 高度56dp
-│  │                             │   │
-│  └─────────────────────────────┘   │
-│  辅助文字/错误提示 (12sp)           │
-└─────────────────────────────────────┘
-- 输入框最小高度: 56dp
-- 内边距: 水平16dp, 垂直16dp
-- 圆角: 12dp (Material 3风格)
-- 聚焦边框宽度: 2dp
-4.2.6 列表项规范
+  | token       | 值    | 用途                                |
+  |-------------|-------|-------------------------------------|
+  | space_xs    | 4dp   | 图标与文字、紧密元素间距            |
+  | space_sm    | 8dp   | 同组元素间距、行内 padding          |
+  | space_md    | 16dp  | 卡片内边距、列表项间距、页面横向    |
+  | space_lg    | 24dp  | 模块间间距、对话框 padding          |
+  | space_xl    | 32dp  | 页面顶部/底部留白                   |
+  | space_xxl   | 48dp  | 主要功能区分隔                      |
 
-列表项类型	高度	左侧图标	文字区域
-单行列表	56dp	24dp图标	16sp文字
-双行列表	72dp	24dp图标	16sp标题 + 14sp副标题
-三行列表	88dp	40dp图标	16sp标题 + 14sp副标题 + 14sp说明
+1.2 容器（含 sw600dp 响应式）
 
-4.3 各页面详细布局参数
-4.3.1 主对话界面布局
+  | token                          | 标准  | sw600dp | 用途                          |
+  |--------------------------------|-------|---------|-------------------------------|
+  | status_bar_design_height       | 24dp  | -       | 设计稿状态栏（运行时用 inset）|
+  | app_bar_height                 | 56dp  | -       | 顶部 toolbar                  |
+  | bottom_tab_height              | 56dp  | -       | 底部 tab 导航                 |
+  | bottom_input_min_height        | 56dp  | -       | 底部输入栏最小高度            |
+  | page_horizontal_padding        | 16dp  | 24dp    | 页面横向 padding              |
+  | page_top_spacing               | 8dp   | 12dp    | 页面顶部间距                  |
+  | page_section_spacing           | 24dp  | 32dp    | 模块间间距                    |
+  | page_bottom_content_padding    | 72dp  | 88dp    | 列表底部预留底部 nav          |
+  | content_max_width              | 840dp | 980dp   | 内容最大宽度（宽屏不撑满）    |
+  | form_max_width                 | 560dp | 640dp   | 表单最大宽度                  |
 
-屏幕总高度 = 状态栏(24dp) + AppBar(56dp) + 内容区(动态) + 输入区(动态) + 底部导航(56dp)
+1.3 卡片
 
-┌─────────────────────────────────────┐
-│ 状态栏: 24dp (系统控制)              │
-├─────────────────────────────────────┤
-│ AppBar: 56dp                        │
-│ ┌─────────────────────────────────┐│
-│ │ [☰ 24dp] [标题 20sp] [模型▼]    ││
-│ │        垂直居中                  ││
-│ └─────────────────────────────────┘│
-├─────────────────────────────────────┤
-│ 内容区域: match_parent - 固定高度    │
-│ padding: 水平16dp                   │
-│                                     │
-│ 消息气泡布局:                        │
-│ ┌─────────────────────────────────┐│
-│ │ 用户消息: 右对齐                 ││
-│ │ ├── 最大宽度: 280dp             ││
-│ │ ├── 最小高度: 48dp              ││
-│ │ ├── 圆角: 20dp (左上/右上/左下) ││
-│ │ ├── 右边距: 16dp                ││
-│ │ └── 背景: #2D2D30               ││
-│ │                                 ││
-│ │ AI消息: 左对齐                   ││
-│ │ ├── 最大宽度: 300dp             ││
-│ │ ├── 圆角: 20dp (右上/左下/右下) ││
-│ │ ├── 左边距: 16dp                ││
-│ │ └── 背景: 渐变边框玻璃态         ││
-│ └─────────────────────────────────┘│
-│                                     │
-│ 消息间距: 12dp                       │
-│ 情感标签高度: 32dp                   │
-├─────────────────────────────────────┤
-│ 输入区域: 动态高度                   │
-│ ┌─────────────────────────────────┐│
-│ │ 功能栏: 48dp高                  ││
-│ │ [🎤][📷][📄][💜] 水平间距8dp    ││
-│ ├─────────────────────────────────┤│
-│ │ 输入框: 最小48dp, 最大120dp      ││
-│ │ padding: 12dp                   ││
-│ │ 右侧发送按钮: 40dp×40dp          ││
-│ └─────────────────────────────────┘│
-│ 底部安全区: 16dp (有导航栏时0dp)     │
-├─────────────────────────────────────┤
-│ 底部Tab导航: 56dp                   │
-└─────────────────────────────────────┘
-4.3.2 对话历史抽屉布局
+  | token              | 值    |
+  |--------------------|-------|
+  | card_radius        | 16dp  |
+  | card_inner_padding | 16dp  |
+  | card_min_height    | 72dp  |
+  | card_elevation     | 4dp   |
 
-抽屉宽度: 屏幕宽度 × 85% (最大360dp)
+1.4 按钮
 
-┌───────────────────────────────┐
-│ 标题栏: 56dp                  │
-│ [←返回] 对话历史 [新建+]      │
-├───────────────────────────────┤
-│ 搜索框: 56dp高                │
-│ padding: 水平16dp             │
-├───────────────────────────────┤
-│ 列表区域:                      │
-│ 每个列表项: 80dp高            │
-│ ┌───────────────────────────┐│
-│ │ [图标 32dp]               ││
-│ │ 标题 16sp                 ││
-│ │ 预览 14sp (灰色)          ││
-│ │ 时间 12sp (右下角)        ││
-│ └───────────────────────────┘│
-│ 列表项间距: 8dp               │
-│ 列表padding: 垂直8dp          │
-└───────────────────────────────┘
-4.3.3 助手主页布局
+  | token                   | 值    | 用途                       |
+  |-------------------------|-------|----------------------------|
+  | button_primary_height   | 48dp  | 主提交按钮                 |
+  | button_secondary_height | 40dp  | 取消、辅助按钮             |
+  | button_small_height     | 32dp  | 内联操作                   |
+  | button_icon_size        | 48dp  | toolbar / 输入栏图标按钮   |
+  | button_primary_corner   | 24dp  | 主按钮圆角（药丸感）       |
+  | button_secondary_corner | 20dp  | 次按钮圆角                 |
+  | button_small_corner     | 16dp  | 小按钮圆角                 |
 
-┌─────────────────────────────────────┐
-│ 状态栏: 24dp                        │
-├─────────────────────────────────────┤
-│ AppBar: 56dp                        │
-│ 标题 "助手" + 右侧定位图标           │
-├─────────────────────────────────────┤
-│ 滚动内容区域 (RecyclerView)          │
-│                                     │
-│ ┌─────────────────────────────────┐│
-│ │ 天气卡片                        ││
-│ │ 高度: 160dp                     ││
-│ │ padding: 20dp                   ││
-│ │ 内部图标: 48dp                  ││
-│ │ 温度文字: 48sp                  ││
-│ │ 状态文字: 16sp                  ││
-│ └─────────────────────────────────┘│
-│ 间距: 16dp                          │
-│                                     │
-│ ┌─────────────────────────────────┐│
-│ │ 今日日程标题 18sp               ││
-│ │ padding: 16dp                   ││
-│ │                                 ││
-│ │ 日程列表项 × N                  ││
-│ │ 每项高度: 64dp                  ││
-│ │ ├── 左侧时间 14sp               ││
-│ │ ├── 右侧标题 16sp               ││
-│ │ └── 分隔线 1dp                  ││
-│ └─────────────────────────────────┘│
-│ 间距: 16dp                          │
-│                                     │
-│ ┌─────────────────────────────────┐│
-│ │ 待办提醒                        ││
-│ │ 标题高度: 48dp                  ││
-│ │ 每项高度: 56dp (可滑动删除)     ││
-│ └─────────────────────────────────┘│
-│ 间距: 16dp                          │
-│                                     │
-│ ┌─────────────────────────────────┐│
-│ │ 今日建议卡片                    ││
-│ │ 高度: 动态 (wrap_content)       ││
-│ │ padding: 20dp                   ││
-│ │ 背景: 渐变色卡片                ││
-│ └─────────────────────────────────┘│
-│                                     │
-│ 底部留白: 72dp (Tab导航 + 安全区)   │
-├─────────────────────────────────────┤
-│ 底部Tab导航: 56dp                   │
-└─────────────────────────────────────┘
-4.3.4 知识库主页布局
+  触控目标最小 48×48dp（包含 padding，符合 a11y 指南）。
 
-┌─────────────────────────────────────┐
-│ 状态栏: 24dp                        │
-├─────────────────────────────────────┤
-│ AppBar: 56dp                        │
-│ 标题 "知识库" + 上传按钮(+图标)      │
-├─────────────────────────────────────┤
-│ 搜索框: 56dp高                      │
-│ padding: 水平16dp, 垂直8dp          │
-├─────────────────────────────────────┤
-│ 滚动内容区域                         │
-│                                     │
-│ 文件夹区域:                          │
-│ ┌─────────────────────────────────┐│
-│ │ 标题 "文件夹" 高度40dp           ││
-│ │ 横向滚动 (HorizontalScrollView) ││
-│ │ 每个文件夹卡片:                  ││
-│ │ ├── 宽度: 140dp                 ││
-│ │ ├── 高度: 100dp                 ││
-│ │ ├── 圆角: 16dp                  ││
-│ │ └── 间距: 12dp                  ││
-│ └─────────────────────────────────┘│
-│ 间距: 24dp                          │
-│                                     │
-│ 最近文档列表:                        │
-│ ┌─────────────────────────────────┐│
-│ │ 标题 "最近文档" 高度40dp         ││
-│ │ 文档列表项:                      ││
-│ │ ├── 高度: 72dp                   ││
-│ │ ├── 图标: 40dp (左侧)           ││
-│ │ ├── 标题: 16sp                   ││
-│ │ ├── 元信息: 12sp (灰色)         ││
-│ │ └── 右侧操作按钮: 40dp           ││
-│ └─────────────────────────────────┘│
-│ 间距: 24dp                          │
-│                                     │
-│ 知识库状态卡片:                      │
-│ ┌─────────────────────────────────┐│
-│ │ 高度: 80dp                       ││
-│ │ 两列信息展示                     ││
-│ └─────────────────────────────────┘│
-│                                     │
-│ 底部留白: 72dp                      │
-├─────────────────────────────────────┤
-│ 底部Tab导航: 56dp                   │
-└─────────────────────────────────────┘
-4.3.5 我的页面布局
+1.5 输入框
 
-┌─────────────────────────────────────┐
-│ 状态栏: 24dp                        │
-├─────────────────────────────────────┤
-│ 用户信息区域: 160dp                 │
-│ ┌─────────────────────────────────┐│
-│ │ 居中布局                        ││
-│ │ 头像: 80dp × 80dp               ││
-│ │ 用户名: 20sp                    ││
-│ │ 副标题: 14sp (灰色)             ││
-│ └─────────────────────────────────┘│
-├─────────────────────────────────────┤
-│ 设置分组列表:                        │
-│                                     │
-│ 分组标题: 高度40dp, 左边距16dp       │
-│                                     │
-│ 设置项:                              │
-│ ┌─────────────────────────────────┐│
-│ │ 高度: 56dp                       ││
-│ │ 左侧图标: 24dp, 边距16dp         ││
-│ │ 文字: 16sp                       ││
-│ │ 右侧箭头: 24dp, 边距16dp         ││
-│ │ 分隔线: 左边距72dp, 右边距16dp   ││
-│ └─────────────────────────────────┘│
-│                                     │
-│ 分组间距: 16dp                       │
-│                                     │
-│ 列表项分组:                          │
-│ ├── 设置组                          │
-│ │   ├── 模型配置                    │
-│ │   ├── 主题设置                    │
-│ │   ├── 通知设置                    │
-│ │   ├── 隐私与安全                  │
-│ │   └── 语言设置                    │
-│ ├── 数据管理组                      │
-│ │   ├── 导出对话                    │
-│ │   ├── 云同步                      │
-│ │   └── 清除缓存                    │
-│ └── 帮助与反馈组                    │
-│     ├── 使用指南                    │
-│     ├── 反馈建议                    │
-│     └── 关于Aura                    │
-│                                     │
-│ 底部留白: 72dp                      │
-├─────────────────────────────────────┤
-│ 底部Tab导航: 56dp                   │
-└─────────────────────────────────────┘
+  | token                    | 值    |
+  |--------------------------|-------|
+  | input_min_height         | 56dp  |
+  | input_corner_radius      | 12dp  |
+  | input_horizontal_padding | 16dp  |
+  | input_vertical_padding   | 16dp  |
 
-4.4 特殊布局处理
-4.4.1 横屏模式
+1.6 列表项
 
-对话页：左侧对话列表 + 右侧对话内容（双栏布局）
-其他页面：保持单栏，增大卡片宽度和边距
-断点判断：宽度 > 600dp 时启用双栏
-4.4.2 折叠屏适配
+  | token                       | 值    | 内容结构              |
+  |-----------------------------|-------|-----------------------|
+  | list_item_single_height     | 56dp  | 1 行 16sp             |
+  | list_item_double_height     | 72dp  | 16sp 标题 + 14sp 副   |
+  | list_item_triple_height     | 88dp  | 16+14+14sp + 头像     |
 
-外屏：标准手机布局
-内屏/展开：双栏布局，左侧固定导航
-** Continuity API**：支持应用内无缝切换
-4.4.3 刘海屏/挖孔屏
+1.7 头像
 
-使用 WindowInsets API 获取安全区域
-状态栏高度动态计算
-全屏模式下避开刘海区域
-4.4.4 底部手势导航条
+  | token       | 值    | 典型用途                       |
+  |-------------|-------|--------------------------------|
+  | avatar_sm   | 32dp  | 紧凑列表 / 通知                |
+  | avatar_md   | 40dp  | 会话/联系人/消息气泡           |
+  | avatar_lg   | 56dp  | 设置中卡片                     |
+  | avatar_xl   | 80dp  | 个人资料 / 注册首页 logo       |
 
-底部留白: navigationBarsPadding()
-FAB位置: 距离底部 56dp + 安全区高度
-底部输入框: 动态调整避开手势区域
+1.8 消息气泡
 
-4.5 Material Design 3 组件适配
-4.5.1 推荐使用的MD3组件
+  | token                          | 值    |
+  |--------------------------------|-------|
+  | bubble_corner                  | 20dp  |
+  | bubble_padding                 | 12dp  |
+  | message_bubble_max_width_user  | 280dp |
+  | message_bubble_max_width_ai    | 300dp |
 
-组件	用途	样式配置
-MaterialCardView	所有卡片	style="@style/Widget.Material3.CardView.Elevated"
-MaterialButton	所有按钮	style="@style/Widget.Material3.Button"
-TextInputLayout	所有输入框	style="@style/Widget.Material3.TextInputLayout.FilledBox"
-NavigationBarView	底部Tab导航	style="@style/Widget.Material3.NavigationBarView"
-FloatingActionButton	悬浮按钮	style="@style/Widget.Material3.FloatingActionButton.Primary"
-MaterialToolbar	顶部栏	style="@style/Widget.Material3.Toolbar"
-4.5.2 颜色主题配置 (colors.xml)
+1.9 弹窗
 
-<!-- 主色调 -->
-<color name="md_theme_primary">#00D4FF</color>
-<color name="md_theme_onPrimary">#FFFFFF</color>
-<color name="md_theme_primaryContainer">#1A1A2E</color>
+  | token          | 值    |
+  |----------------|-------|
+  | dialog_corner  | 16dp  |
+  | dialog_padding | 24dp  |
 
-<!-- 次要色调 -->
-<color name="md_theme_secondary">#7B2FFF</color>
-<color name="md_theme_onSecondary">#FFFFFF</color>
+1.10 图标尺寸（组件内部用）
 
-<!-- 背景色 -->
-<color name="md_theme_background">#0D1117</color>
-<color name="md_theme_onBackground">#E6E6E6</color>
+  | token    | 值    | 典型用途                     |
+  |----------|-------|------------------------------|
+  | icon_sm  | 16dp  | 内联装饰图标、选中标记       |
+  | icon_md  | 24dp  | 设置项主图标、导航箭头       |
+  | icon_lg  | 32dp  | 独立图标按钮                 |
 
-<!-- 表面色 -->
-<color name="md_theme_surface">#161B22</color>
-<color name="md_theme_onSurface">#E6E6E6</color>
+1.11 角标 / Badge
 
-<!-- 卡片背景 -->
-<color name="card_background">#1C1C1E</color>
-<color name="card_border">#2D2D30</color>
-4.5.3 主题配置 (themes.xml)
+  | token                    | 值    |
+  |--------------------------|-------|
+  | badge_min_size           | 20dp  |
+  | badge_padding_horizontal | 6dp   |
+  | badge_padding_vertical   | 2dp   |
 
-<style name="Theme.Aura" parent="Theme.Material3.Dark.NoActionBar">
-    <item name="colorPrimary">@color/md_theme_primary</item>
-    <item name="colorSecondary">@color/md_theme_secondary</item>
-    <item name="android:colorBackground">@color/md_theme_background</item>
-    <item name="colorSurface">@color/md_theme_surface</item>
-</style>
+1.12 杂项
 
-4.6 布局层级优化建议
-4.6.1 减少布局嵌套
+  | token                | 值    | 用途                      |
+  |----------------------|-------|---------------------------|
+  | stroke_width         | 1dp   | 卡片 / 输入框默认 stroke  |
+  | swipe_action_width   | 80dp  | 侧滑删除/操作按钮宽度     |
+  | msg_row_padding_v    | 4dp   | 消息气泡行外部上下 padding|
 
-❌ 不推荐 (4层嵌套):
-LinearLayout
-  └── LinearLayout
-        └── FrameLayout
-              └── LinearLayout
-                    └── TextView
+================================================================================
+2. 主题系统 ThemePalette
+================================================================================
 
-✅ 推荐 (使用ConstraintLayout):
-ConstraintLayout
-  ├── TextView
-  ├── ImageView
-  └── Button
-4.6.2 使用ViewStub延迟加载
+源： app/src/main/java/com/example/koukou/theme/ThemePalette.java
+内置 8 主题（chatBackground 字符串）：
+  butterfly       蝴蝶流光（默认，深色）
+  minimal         极简（深色）
+  minimal_white   极简（浅色）
+  pink_bunny      粉兔（浅色）
+  matrix          黑客代码雨（深色）
+  stardust        星尘（深色）
+  cyber           电子（深色）
+  raindrop        雨滴（深色）
 
-对话历史抽屉 -> 使用 ViewStub
-情感分析报告弹窗 -> 使用 ViewStub
-减少首次渲染时间
-4.6.3 RecyclerView优化
+2.1 palette 字段总览
 
-使用 DiffUtil 进行差异化更新
-设置 setHasFixedSize(true)（如果确定item高度固定）
-使用 RecyclerView.setRecycledViewPool() 复用ViewHolder
+  ┌─ 文字 ────────────────────────────────────────────────
+  │ textPrimary      主标题、条目名、昵称
+  │ textSecondary    副文本、签名、最后一条消息、空态
+  │ textTertiary     时间、弱化说明、提示
+  │ textAccent       账号、强调字段
+  ├─ 图标 ────────────────────────────────────────────────
+  │ iconPrimary      工具栏图标、返回键
+  │ iconAccent       设置项强调图标
+  │ iconMuted        次级图标
+  ├─ 线条 ────────────────────────────────────────────────
+  │ cardStroke       卡片描边、输入框 stroke
+  ├─ 背景资源 (DrawableRes) ──────────────────────────────
+  │ bgGlassCard           大型信息卡片（个人资料、登录卡）
+  │ bgListCard            列表条目（会话、联系人）
+  │ bgSettingsRow         设置项行
+  │ bgSettingsActionRow   设置项危险/退出行
+  │ bgPanel               小型按钮/图标面板（返回键、添加好友）
+  │ bgBottomNav           底部导航条
+  │ bgUnreadBadge         未读红点
+  │ bgInputBar            聊天输入条（常态）
+  │ bgInputBarActive      聊天输入条（输入激活）
+  ├─ 控件 ────────────────────────────────────────────────
+  │ switchOffTrack/Thumb  Switch 关闭态轨道/滑块
+  │ switchActiveAlpha     Switch 激活态轨道 alpha (0~255)
+  │ switchElevation       Switch elevation
+  ├─ 导航 ────────────────────────────────────────────────
+  │ navInactive / navSelected   底部导航未选中/选中色
+  │ navBadgeColor               导航 badge 背景（0=默认 cyan）
+  ├─ 元信息 ──────────────────────────────────────────────
+  │ lightPalette          是否浅色皮，驱动状态栏图标反色
+  └───────────────────────────────────────────────────────
+
+2.2 调用契约
+
+  Activity / Fragment 必须监听 SettingsState：
+
+      settingsRepository.getSettingsLiveData().observe(this, state -> {
+          AppearanceManager.applyPageAppearance(this, getWindow(), root, state);
+          applyPalette(AppearanceManager.paletteOf(state));
+      });
+
+  applyPalette(palette) 内部把 palette 字段映射到所有静态 TextView、卡片、按钮。
+  RecyclerView 子项：在 adapter.onBindViewHolder 内
+  AppearanceManager.currentPalette(itemView.getContext()) 应用到子 view。
+
+2.3 添加新主题
+
+  1. ThemePalette 加常量 MY_THEME = myTheme();
+  2. forState(state) switch 中登记 chatBackground key。
+  3. SettingsRepository / 设置页选项中追加。
+  4. 业务代码无需改动 — 全部读 palette 字段，自动生效。
+
+2.4 添加新字段
+
+  1. ThemePalette 增加字段（@ColorInt / @DrawableRes 标注）。
+  2. 8 个 palette 工厂各补一行赋值（编译器不强制，靠人工 review）。
+  3. 业务代码读 palette.newField。
+
+================================================================================
+3. 页面骨架
+================================================================================
+
+3.1 通用骨架（顶栏 + 内容 + 底栏）
+
+  ┌───────────────────────────────────────┐
+  │ 系统状态栏（WindowInsets，运行时计算）│
+  ├───────────────────────────────────────┤
+  │ MaterialToolbar  (app_bar_height)     │
+  ├───────────────────────────────────────┤
+  │ 内容区                                 │
+  │   paddingHorizontal: page_horizontal_padding │
+  │   paddingTop:        page_top_spacing │
+  │   paddingBottom:     page_bottom_content_padding │
+  │   maxWidth:          content_max_width │
+  ├───────────────────────────────────────┤
+  │ BottomNavigationView (bottom_tab_height) │
+  └───────────────────────────────────────┘
+
+3.2 滚动 + 键盘
+
+  - 表单页根布局必须包 NestedScrollView，避免键盘遮挡按钮。
+  - AndroidManifest 给登录/注册 activity 加 windowSoftInputMode="adjustResize"。
+  - 长列表用 RecyclerView，绝不嵌入 NestedScrollView 中（否则失去回收）。
+
+3.3 响应式（sw600dp）
+
+  - dimens.xml + values-sw600dp/dimens.xml 提供两套关键 token。
+  - 内容容器加 layout_constraintWidth_max="@dimen/content_max_width"，
+    宽屏不会撑满，保持阅读舒适。
+  - 横屏聊天双栏（左会话列表 + 右会话）暂未实现，作为后续扩展。
+
+================================================================================
+4. 组件规范
+================================================================================
+
+4.1 卡片  (MaterialCardView)
+
+  - 圆角           card_radius (16dp)
+  - 内边距         card_inner_padding (16dp)
+  - 描边色         palette.cardStroke
+  - 背景           palette.bgGlassCard / bgListCard
+  - elevation      玻璃感卡片为 0；实体卡片可用 card_elevation
+  - 卡片间距       垂直 space_md
+
+4.2 按钮  (MaterialButton)
+
+  | 类型     | height                  | corner                  | 触发反馈        |
+  |----------|-------------------------|-------------------------|-----------------|
+  | 主按钮   | button_primary_height   | button_primary_corner   | CONFIRM         |
+  | 次按钮   | button_secondary_height | button_secondary_corner | KEYBOARD_TAP    |
+  | 小按钮   | button_small_height     | button_small_corner     | KEYBOARD_TAP    |
+  | 图标按钮 | button_icon_size        | 圆形                    | KEYBOARD_TAP    |
+
+  - 主按钮渐变 drawable（如 bg_button_gradient_20）默认蝴蝶蓝；
+    后续可在 palette 加 bgPrimaryButton 字段实现按主题切换。
+  - 失败抖动：playButtonPress() ObjectAnimator scale 0.95 → 1.0  150ms。
+
+4.3 输入框  (TextInputLayout + TextInputEditText)
+
+  - 高度            input_min_height
+  - 圆角            input_corner_radius
+  - boxBackgroundMode  outline
+  - boxBackgroundColor Color.TRANSPARENT  ← 让父卡片背景透出
+  - boxStrokeColor     palette.cardStroke
+  - hintTextColor      palette.textTertiary
+  - EditText textColor palette.textPrimary
+  - **错误**：til.setError("...") + EditText.requestFocus()，禁止 Toast
+  - **清错**：在 EditText.addTextChangedListener 内 til.setError(null)
+
+4.4 列表项
+
+  - 高度按内容档位选 list_item_single/double/triple_height
+  - 横向 padding    space_md
+  - 头像-文本间距   space_sm
+  - 列表分隔由背景 drawable 自带（圆角 + stroke），不要再加 divider
+
+4.5 消息气泡
+
+  - 圆角        bubble_corner（不对称：靠头像侧顶角实角，体现指向性）
+  - 内边距      bubble_padding
+  - 最大宽度    user 280 / receive 300
+  - 头像        avatar_md
+  - 气泡-头像间距  space_sm
+  - 气泡背景由主题 drawable 决定（chat 列表自动按 chatBackground 切换）
+
+4.6 头像
+
+  - 4 档（avatar_sm/md/lg/xl，§1.7）
+  - 圆形：MaterialCardView + cardCornerRadius=size/2，或 ShapeableImageView
+  - 占位：@mipmap/tubiao（默认头像）
+
+4.7 弹窗
+
+  - 圆角       dialog_corner
+  - 边距       dialog_padding
+  - 标题       18sp、palette.textPrimary
+  - 内容       14sp、palette.textSecondary
+  - 主+次按钮间距 space_md
+  - 已 token 化：dialog_add_friend / dialog_change_password / dialog_edit_profile /
+                dialog_settings_choice / dialog_settings_confirm
+
+================================================================================
+5. koukou 页面布局
+================================================================================
+
+5.1 登录页  activity_login.xml  +  LoginActivity.java
+
+  根：ConstraintLayout
+   ├─ FrameLayout  (品牌 hero 蝴蝶 + glow_halo)
+   │    layout_constraintWidth_percent = 0.62
+   │    DimensionRatio H,1.18:1     ← 自动按屏宽缩放，永不溢出小屏
+   ├─ NestedScrollView  (整页可滚)
+   │    ├─ tv_title (24sp / textPrimary)
+   │    ├─ tv_subtitle (14sp / textSecondary)
+   │    ├─ cv_history    历史账号优先卡片，§5.1.A
+   │    ├─ cv_form       表单卡片，§5.1.B
+   │    ├─ btn_use_other （outline 按钮，仅在历史模式下可见）
+   │    ├─ btn_login     button_primary_height
+   │    └─ tv_register   底部次入口
+   └─ glow_sheen_top/bottom  0×0 GONE 占位（兼容 ViewBinding）
+
+  5.1.A 历史模式（B+C 设计）
+    - 触发：UserHelper.getSavedLogins() 非空
+    - RecyclerView 卸入式（max 260dp 高），item_account_history
+    - **单击行直接 viewModel.login(account, password)**，不需要再点登录按钮
+    - 删除 swipe-action 触发 deleteAccount → 列表清空时自动切表单模式
+    - "使用其他账号" 切到表单模式（fade in 220ms）
+
+  5.1.B 表单模式
+    - til_account / til_password 用 outline + transparent box
+    - 错误用 setError() 内联，TextWatcher 输入即清错
+    - 失败提示：showTip() → Snackbar，背景 lightPalette ? 0xEEFFFFFF : 0xCC152443
+
+5.2 注册页  activity_register.xml  +  RegisterActivity.java
+
+  - 单一表单卡（无历史模式）
+  - 4 个 TextInputLayout：昵称 / 扣扣号（带刷新 endIcon）/ 密码 / 确认密码
+  - 全部校验内联：tilXxx.setError("...") + requestFocus()
+  - attachErrorClearer(til) 工具方法挂"输入即清错"
+  - 注册成功：postDelayed(200ms) 让用户看见 Snackbar 再 finish() 回登录页
+
+5.3 会话列表  fragment_conversations.xml
+
+  - MaterialToolbar (app_bar_height) 标题"消息"
+  - RecyclerView，item_conversation
+      高度    list_item_double_height (72dp)
+      头像    avatar_md (40dp) + 未读 badge (palette.bgUnreadBadge)
+      昵称    16sp / textPrimary
+      最后一条 14sp / textSecondary
+      时间    12sp / textTertiary
+  - 顶部 padding   page_top_spacing
+  - 底部 padding   page_bottom_content_padding （让出底部 nav）
+  - 横向 padding   page_horizontal_padding
+
+5.4 联系人  fragment_contacts.xml
+
+  - MaterialToolbar 标题"联系人" + 添加好友 icon (button_icon_size, palette.bgPanel)
+  - RecyclerView 同 5.3 结构
+  - 添加好友弹窗：dialog_add_friend.xml，单输入框（扣扣号）
+
+5.5 聊天页  activity_chat.xml
+
+  - Toolbar：标题=对方昵称、subtitle=在线/离线
+  - 消息列表 RecyclerView（item_msg_send / item_msg_receive，§4.5）
+  - 功能栏 (height = button_icon_size)：语音/相机/相册 三个 avatar_md icon
+  - 输入栏：
+      et_input         minHeight=input_min_height, maxLines=5
+      btn_more         avatar_md, padding=space_sm
+      btn_send         avatar_md, 渐变背景 bg_button_gradient_20
+                       cornerRadius=button_secondary_corner
+  - 表情面板高度 250dp（暂未 token 化，可后续加 emoji_panel_height）
+
+5.6 设置页  fragment_settings.xml  +  activity_settings_detail.xml
+
+  - 用户信息卡 cv_info：
+      MaterialCardView, cardCornerRadius=card_radius, padding=card_inner_padding
+      头像 avatar_xl (80dp) + 昵称 18sp + 签名 14sp
+  - 设置列表 RecyclerView：
+      普通项     list_item_single_height + bgSettingsRow
+      带副文本   list_item_double_height + bgSettingsRow
+      危险/退出  bgSettingsActionRow（红色调，不需要单独 layout）
+  - 详情页 layout_top_bar = 返回 icon (avatar_md) + 标题 + 副标题
+  - 详情页 RecyclerView 同主页风格
+
+5.7 好友资料  activity_friend_profile.xml
+
+  - 顶部装饰 hero（半透明蝴蝶，alpha=0.82，FrameLayout 包裹）
+  - 返回 icon (avatar_md) + 大头像 cardAvatar (avatar_xl)
+  - 信息卡片：昵称 / 扣扣号 / 签名（每行 list_item_double_height）
+  - 操作按钮：发消息（主按钮）/ 删除好友（次按钮）
+
+5.8 版本信息  activity_version_info.xml
+
+  - 单卡片，居中（width_max = form_max_width）
+  - app logo (avatar_xl) + 版本号 (24sp) + 简介 (14sp)
+
+================================================================================
+6. 状态设计
+================================================================================
+
+6.1 加载
+
+  - 全屏加载    透明遮罩 + ProgressBar (indeterminateTintList = palette.textPrimary)
+  - 按钮加载    btn.setEnabled(false) + 文案改"登录中..."
+  - 列表加载    item 占位骨架（暂未实现，可作为后续扩展）
+
+6.2 空态
+
+  - RecyclerView 上方覆盖 emptyView（同一 ConstraintLayout 内）
+  - 居中：图标（avatar_xl 大小灰度）+ 14sp 提示语 (palette.textSecondary)
+  - 类型：空联系人 / 空会话 / 无搜索结果 / 空黑名单
+
+6.3 错误
+
+  - **表单字段错误**       til.setError(...)（不要 Toast / Snackbar）
+  - **网络错误**           Snackbar，提供"重试"动作（顶端、palette 背景）
+  - **致命错误**           AlertDialog（dialog_corner / dialog_padding）
+  - 错误文案规则：
+      - 中文优先，控制在 12 字以内
+      - 描述"是什么不对"，不解释技术细节
+      - 给可执行动作（"请输入扣扣号"而不是"账号不能为空"）
+
+6.4 成功反馈
+
+  - 轻量    Snackbar 1.5s（默认 SHORT）
+  - 强反馈  HapticFeedback.CONFIRM + Snackbar
+  - 跳转前  postDelayed(180~200ms) 让用户看到反馈再切屏
+
+================================================================================
+7. 动效预算
+================================================================================
+
+7.1 时长
+
+  | 场景            | 时长     | 备注                  |
+  |-----------------|----------|-----------------------|
+  | 微反馈          | 75-150ms | 按下/松开缩放         |
+  | 局部组件切换    | 220ms    | 卡片 fade+slide       |
+  | 页面入场        | 300-400ms| logo/hero 淡入        |
+  | 长动画上限      | ≤ 500ms  | 超过应当拆分          |
+
+7.2 缓动
+
+  - 入场    DecelerateInterpolator
+  - 出场    AccelerateInterpolator
+  - 标准    FastOutSlowInInterpolator（Material 默认）
+
+7.3 触觉反馈（HapticFeedbackConstants）
+
+  - 主按钮点击    CONFIRM
+  - 次按钮/链接   KEYBOARD_TAP
+  - 长按删除      LONG_PRESS
+  - 拖拽吸附      GESTURE_END
+
+7.4 动画属性
+
+  - 推荐     translation / scale / rotation / alpha （不触发 layout）
+  - 禁止     每帧 invalidate + 重新 measure / layout
+  - 装饰特效见 §9 性能铁律
+
+================================================================================
+8. 可访问性
+================================================================================
+
+8.1 触控目标
+
+  最小 48×48dp（含 padding）。所有图标按钮已用 button_icon_size。
+
+8.2 字号缩放
+
+  SettingsState.fontSize = small/medium/large
+  → AppearanceManager.fontScale = 0.9 / 1.0 / 1.12
+  在 applyPageAppearance 内通过 tag 缓存自动应用到 RecyclerView 子项。
+  **禁止用 dp/px 设置文字尺寸，必须 sp**。
+
+8.3 对比度
+
+  - 浅色主题（minimal_white / pink_bunny）：palette.textPrimary 与背景 ≥ 4.5:1
+  - 深色主题：≥ 7.0:1（推荐）
+  - 切到浅色主题不能"白底白字" — 所有静态文字必须走 palette，
+    不能仅依赖 @color/butterfly_text_*（那是深色主题专用 fallback）。
+
+8.4 contentDescription
+
+  纯图标按钮必须带 android:contentDescription（已在 activity_chat 等执行）。
+
+================================================================================
+9. 性能与禁忌  （与 扩展.md §9.5 联动）
+================================================================================
+
+铁律 1： **永远不要 setLayerType(LAYER_TYPE_SOFTWARE, null)**
+  软件层让整 View 走 CPU 路径，是主题卡顿的根因。
+  替代方案：发光 → 多层同心圆；模糊 → 多次偏移 drawText。
+
+铁律 2： **永远不要 setShadowLayer / BlurMaskFilter**
+  低端机帧率下崩坏。
+  替代方案：自绘多层 stroke / 4 方向偏移补绘。
+
+铁律 3： **帧调度用 postInvalidateOnAnimation()，不要 postInvalidateDelayed(N)**
+  前者与 Choreographer/vsync 对齐，自动适配 60/90/120Hz。
+
+铁律 4： **热路径里不要 Color.parseColor(String) / new RectF() / String.valueOf(char)**
+  预解析为 int 字段；类字段级 RectF / Path 复用；char[1] + drawText(char[]...)。
+
+铁律 5： **避免 ConstraintLayout 嵌套 ConstraintLayout**
+  一个页面一个 root ConstraintLayout，子项用 LinearLayout / FrameLayout。
+
+铁律 6： **列表必须复用**
+  DiffUtil 差分；setHasFixedSize(true)；setRecycledViewPool 共享。
+
+铁律 7： **装饰特效必须 GONE 而不是 INVISIBLE**
+  GONE 不参与 measure/layout；INVISIBLE 仍占布局 + 仍 draw。
+
+铁律 8： **重物理（碰撞、网格哈希）放独立 HandlerThread**
+  主线程只 postInvalidateOnAnimation + onDraw。
+
+================================================================================
+10. 维护流程
+================================================================================
+
+10.1 新增/修改组件
+
+  1. dimens.xml 加 token（如 emoji_panel_height）。
+  2. 本规范 §1 表中登记。
+  3. 业务 XML 引用 @dimen/token。
+  4. 若涉颜色：ThemePalette 加字段 + 8 个工厂方法补值。
+  5. observeAppearance 中应用到具体 View。
+  6. 同步更新 扩展.md。
+
+10.2 新增页面
+
+  1. 选骨架（§3.1 通用 / §3.2 表单滚动 / §3.3 响应式）。
+  2. 列表项选高度（§1.6）。
+  3. 卡片用 §4.1，按钮用 §4.2，输入用 §4.3。
+  4. 接入 ThemePalette（§2.2）。
+  5. 错误用 §6.3 内联模式，反馈用 §6.4 Snackbar。
+  6. 走 §9 性能铁律 self-check。
+
+10.3 反向追溯
+
+  发现 XML 出现裸 dp 或 #RRGGBB？
+  → 优先迁移到 token / palette；
+  → 不能立即迁移的写到 扩展.md 待办列表，注明原因。
+
+================================================================================
+附录 A. 已迁移布局清单 （v2.0 起）
+================================================================================
+
+页面：activity_login / activity_register / activity_chat / activity_main /
+      activity_settings_detail / activity_friend_profile
+
+Fragment：fragment_settings / fragment_contacts / fragment_conversations
+
+弹窗：dialog_add_friend / dialog_change_password / dialog_edit_profile /
+      dialog_settings_choice / dialog_settings_confirm
+
+列表项：item_msg_send / item_msg_receive / item_conversation /
+        item_account_history / item_dialog_option / layout_account_history
+
+保留硬编码（艺术资产）：view_iridescent_butterfly.xml（蝴蝶光翼装饰，按设计稿摆放）
+
+================================================================================
+附录 B. 与 v1.0 的差异
+================================================================================
+
+删除（已不在 koukou 实现中）：
+  - 4.3.2 对话历史抽屉 → koukou 无抽屉式会话历史
+  - 4.3.3 助手主页（天气卡片、日程、待办）→ Aura 专属
+  - 4.3.4 知识库主页（文件夹、最近文档）→ Aura 专属
+  - 4.5.2 colors.xml 硬编码颜色（md_theme_*）→ 由 ThemePalette 取代
+
+新增：
+  - §1 完整 dimens token 表（22 个 token）
+  - §2 ThemePalette 22 字段契约
+  - §5.1 登录页历史模式（B+C 设计）
+  - §5.5-5.8 koukou 实际页面骨架
+  - §6 状态设计（加载/空态/错误/成功）
+  - §7 动效预算
+  - §8 可访问性约束
+  - §9 性能 8 铁律
+  - §10 维护流程

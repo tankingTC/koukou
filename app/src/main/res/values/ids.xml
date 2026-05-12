@@ -2,4 +2,8 @@
 <resources>
     <item name="tag_base_text_size" type="id" />
     <item name="tag_iridescence_animators" type="id" />
+    <item name="tag_applied_theme_hash" type="id" />
+    <item name="tag_applied_font_scale" type="id" />
+    <item name="tag_iridescence_animator_key" type="id" />
+    <item name="raindrop_view" type="id" />
 </resources>

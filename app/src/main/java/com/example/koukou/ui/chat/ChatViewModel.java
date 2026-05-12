@@ -43,4 +43,8 @@ public class ChatViewModel extends ViewModel {
             repository.sendMessage(targetId, content, msgType, localPath, "single");
         }
     }
+
+    public void retryMessage(String messageId) {
+        repository.retryMessage(messageId);
+    }
 }

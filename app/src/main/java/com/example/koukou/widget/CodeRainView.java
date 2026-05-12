@@ -1,6 +1,7 @@
 package com.example.koukou.widget;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -9,7 +10,9 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 public class CodeRainView extends View {
@@ -18,6 +21,9 @@ public class CodeRainView extends View {
     private static final int LAYER_FAR = 0;
     private static final int LAYER_MID = 1;
     private static final int LAYER_NEAR = 2;
+    // 60fps：与 vsync 对齐使用 postInvalidateOnAnimation，避免 33ms 延迟导致的顿挫感
+    private static final int MAX_PARTICLES = 90;
+    private static final int MAX_RIPPLES = 28;
 
     private final Paint glyphPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint headPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -27,13 +33,39 @@ public class CodeRainView extends View {
     private final Paint ripplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint scanlinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint bitmapPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final Random random = new Random();
     private final List<Drop> drops = new ArrayList<>();
     private final List<ImpactParticle> particles = new ArrayList<>();
     private final List<GroundRipple> ripples = new ArrayList<>();
+    private final Map<String, Integer> colorCache = new HashMap<>();
+
+    // 预解析的颜色，避免热路径 Color.parseColor / withAlpha 字符串查询
+    private int colHeadCore;
+    private int colHeadGlow;
+    private int colHeadShadowNear;
+    private int colHeadShadowMid;
+    private int colTrailFar;
+    private int colTrailMid;
+    private int colTrailNear;
+    private int colImpactWhite;
+    private int colImpactNeon;
+
+    // 缓存：地面网格 + 扫描线（每帧不变，烤进 Bitmap 大幅减少 drawLine 次数）
+    private Bitmap staticOverlay;
+    private int staticOverlayW;
+    private int staticOverlayH;
+    private boolean staticOverlayDirty = true;
+
+    // 预计算尾部 alpha 衰减表（按 layer × index）
+    private static final int MAX_TRAIL = 16;
+    private final float[] decayFar = new float[MAX_TRAIL];
+    private final float[] decayMid = new float[MAX_TRAIL];
+    private final float[] decayNear = new float[MAX_TRAIL];
 
     private boolean rainEnabled = false;
     private boolean lightPalette = false;
+    private boolean attachedToWindow = false;
     private long lastFrameTime = 0L;
     private float spawnFarAccumulator = 0f;
     private float spawnMidAccumulator = 0f;
@@ -75,9 +107,19 @@ public class CodeRainView extends View {
         scanlinePaint.setStyle(Paint.Style.STROKE);
         gridPaint.setStyle(Paint.Style.STROKE);
         setWillNotDraw(false);
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
+        // 改为硬件加速：头部辉光改用多方向偏移补绘代替 setShadowLayer 的高斯模糊，
+        // 整 View 不再走软件层，60fps 下 CPU/GPU 开销大幅下降。
         setAlpha(0.9f);
+        buildDecayTables();
         applyPalette();
+    }
+
+    private void buildDecayTables() {
+        for (int i = 0; i < MAX_TRAIL; i++) {
+            decayFar[i] = (float) Math.exp(-i * 0.62);
+            decayMid[i] = (float) Math.exp(-i * 0.48);
+            decayNear[i] = (float) Math.exp(-i * 0.36);
+        }
     }
 
     public void setRainEnabled(boolean enabled) {
@@ -89,6 +131,7 @@ public class CodeRainView extends View {
             drops.clear();
             particles.clear();
             ripples.clear();
+            lastFrameTime = 0L;
             invalidate();
             return;
         }
@@ -120,14 +163,48 @@ public class CodeRainView extends View {
         lastFrameTime = now;
 
         updateSimulation(dt);
-        drawGroundPlane(canvas);
+        drawStaticOverlay(canvas);
         drawDropsForLayer(canvas, LAYER_FAR);
         drawDropsForLayer(canvas, LAYER_MID);
         drawDropsForLayer(canvas, LAYER_NEAR);
         drawGroundRipples(canvas);
         drawImpactParticles(canvas);
-        drawScanlines(canvas);
-        postInvalidateOnAnimation();
+        scheduleNextFrame();
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        staticOverlayDirty = true;
+    }
+
+    private void drawStaticOverlay(Canvas canvas) {
+        int w = getWidth();
+        int h = getHeight();
+        if (staticOverlayDirty || staticOverlay == null || staticOverlayW != w || staticOverlayH != h) {
+            rebuildStaticOverlay(w, h);
+        }
+        if (staticOverlay != null) {
+            canvas.drawBitmap(staticOverlay, 0f, 0f, bitmapPaint);
+        }
+    }
+
+    private void rebuildStaticOverlay(int w, int h) {
+        if (w <= 0 || h <= 0) return;
+        if (staticOverlay == null || staticOverlayW != w || staticOverlayH != h) {
+            if (staticOverlay != null) {
+                staticOverlay.recycle();
+            }
+            staticOverlay = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        } else {
+            staticOverlay.eraseColor(0);
+        }
+        staticOverlayW = w;
+        staticOverlayH = h;
+        Canvas c = new Canvas(staticOverlay);
+        drawGroundPlane(c);
+        drawScanlines(c);
+        staticOverlayDirty = false;
     }
 
     private void updateSimulation(float dt) {
@@ -135,9 +212,9 @@ public class CodeRainView extends View {
         spawnMidAccumulator += dt;
         spawnNearAccumulator += dt;
 
-        int farTarget = Math.max(18, (int) (getWidth() / dp(22f)));
-        int midTarget = Math.max(22, (int) (getWidth() / dp(20f)));
-        int nearTarget = Math.max(10, (int) (getWidth() / dp(42f)));
+        int farTarget = Math.max(12, (int) (getWidth() / dp(30f)));
+        int midTarget = Math.max(16, (int) (getWidth() / dp(28f)));
+        int nearTarget = Math.max(7, (int) (getWidth() / dp(56f)));
 
         spawnDropsForLayer(LAYER_FAR, farTarget, 0.10f, spawnFarAccumulator);
         spawnFarAccumulator = consumeAccumulator(LAYER_FAR, spawnFarAccumulator);
@@ -235,60 +312,98 @@ public class CodeRainView extends View {
         }
     }
 
+    private final char[] glyphBuf = new char[1];
+
     private void drawDropsForLayer(Canvas canvas, int targetLayer) {
-        for (Drop drop : drops) {
+        // 头部辉光：用 4 方向偏移补绘代替 setShadowLayer 的高斯模糊。
+        // 硬件加速下，drawText 是 GPU 友好的，4 次偏移 + 1 次实体远比 1 次 shadow blur 便宜。
+        float glowOffset;
+        int glowColor;
+        float ghostOffset;
+        int trailColor;
+        float[] decay;
+        if (targetLayer == LAYER_NEAR) {
+            glowOffset = dp(2.6f);
+            glowColor = withAlphaInt(colHeadGlow, 90);
+            ghostOffset = dp(1.6f);
+            trailColor = colTrailNear;
+            decay = decayNear;
+        } else if (targetLayer == LAYER_MID) {
+            glowOffset = dp(1.8f);
+            glowColor = withAlphaInt(colHeadGlow, 75);
+            ghostOffset = dp(1.1f);
+            trailColor = colTrailMid;
+            decay = decayMid;
+        } else {
+            glowOffset = dp(1.1f);
+            glowColor = withAlphaInt(colHeadGlow, 50);
+            ghostOffset = dp(0.7f);
+            trailColor = colTrailFar;
+            decay = decayFar;
+        }
+
+        // 同一 layer 内所有 drop 的 textSize 一致（见 createDrop 中按 layer 固定的 dp 值），
+        // 只在每个 layer 入口设置一次，省去每 drop 重复 setTextSize 的开销。
+        float layerTextSize = 0f;
+        for (int probe = 0, n = drops.size(); probe < n; probe++) {
+            Drop d0 = drops.get(probe);
+            if (d0.layer == targetLayer) {
+                layerTextSize = d0.textSize;
+                break;
+            }
+        }
+        if (layerTextSize <= 0f) {
+            return;
+        }
+        glyphPaint.setTextSize(layerTextSize);
+        headPaint.setTextSize(layerTextSize);
+        glowPaint.setTextSize(layerTextSize);
+        glowPaint.setColor(glowColor);
+
+        int h = getHeight();
+        for (int idx = 0, n = drops.size(); idx < n; idx++) {
+            Drop drop = drops.get(idx);
             if (drop.layer != targetLayer) {
                 continue;
             }
-            glyphPaint.setTextSize(drop.textSize);
-            headPaint.setTextSize(drop.textSize);
-            glowPaint.setTextSize(drop.textSize);
-
-            if (drop.layer == LAYER_NEAR) {
-                glowPaint.setShadowLayer(dp(10f), 0f, 0f, withAlpha(lightPalette ? "#9AFFF4" : "#62FFD7", 110));
-            } else if (drop.layer == LAYER_MID) {
-                glowPaint.setShadowLayer(dp(6f), 0f, 0f, withAlpha(lightPalette ? "#AAFFF8" : "#53FFCE", 90));
-            } else {
-                glowPaint.setShadowLayer(dp(3f), 0f, 0f, withAlpha(lightPalette ? "#9BFFF8" : "#45F9C7", 44));
-            }
-
             float y = drop.y;
-            for (int i = 0; i < drop.trailLength; i++) {
+            int trailLen = drop.trailLength;
+            for (int i = 0; i < trailLen; i++) {
                 float charY = y - i * drop.charStep;
-                if (charY < -drop.charStep || charY > getHeight() + drop.charStep) {
+                if (charY < -drop.charStep || charY > h + drop.charStep) {
                     continue;
                 }
-                char glyph = drop.glyphs[i % drop.glyphs.length];
+                glyphBuf[0] = drop.glyphs[i % drop.glyphs.length];
                 if (i == 0) {
-                    int glowColor = withAlpha(lightPalette ? "#F7FFFF" : "#B8FFF2", drop.layer == LAYER_NEAR ? 156 : 126);
-                    glowPaint.setColor(glowColor);
-                    canvas.drawText(String.valueOf(glyph), drop.x, charY, glowPaint);
-
-                    int headColor = Color.parseColor(lightPalette ? "#FFFFFF" : "#F2FFF8");
-                    headPaint.setColor(headColor);
-                    headPaint.setShadowLayer(dp(drop.layer == LAYER_NEAR ? 10f : 7f), 0f, 0f,
-                            withAlpha(lightPalette ? "#D1FFF8" : "#61FFD3", drop.layer == LAYER_NEAR ? 166 : 132));
-                    canvas.drawText(String.valueOf(glyph), drop.x, charY, headPaint);
-                    headPaint.clearShadowLayer();
+                    // 4 方向偏移补绘形成"伪辉光"
+                    canvas.drawText(glyphBuf, 0, 1, drop.x - glowOffset, charY, glowPaint);
+                    canvas.drawText(glyphBuf, 0, 1, drop.x + glowOffset, charY, glowPaint);
+                    canvas.drawText(glyphBuf, 0, 1, drop.x, charY - glowOffset, glowPaint);
+                    canvas.drawText(glyphBuf, 0, 1, drop.x, charY + glowOffset, glowPaint);
+                    // 头部主体
+                    headPaint.setColor(colHeadCore);
+                    canvas.drawText(glyphBuf, 0, 1, drop.x, charY, headPaint);
                 } else {
-                    double decay = Math.exp(-i * (drop.layer == LAYER_FAR ? 0.62 : drop.layer == LAYER_MID ? 0.48 : 0.36));
-                    int alpha = (int) (drop.baseAlpha * decay);
-                    glyphPaint.setColor(withAlpha(drop.layer == LAYER_FAR
-                            ? (lightPalette ? "#B4FFF8" : "#4CF4C5")
-                            : (drop.layer == LAYER_MID ? (lightPalette ? "#B9FFF9" : "#66FFD2") : (lightPalette ? "#D4FFFB" : "#8FFFE2")), alpha));
-                    glyphPaint.setShadowLayer(dp(drop.layer == LAYER_NEAR ? 6f : drop.layer == LAYER_MID ? 4f : 1.5f), 0f, 0f,
-                            withAlpha(lightPalette ? "#BAFFF8" : "#34F1BE", Math.min(130, alpha)));
-                    canvas.drawText(String.valueOf(glyph), drop.x, charY, glyphPaint);
-                    glyphPaint.clearShadowLayer();
+                    float d = i < MAX_TRAIL ? decay[i] : 0f;
+                    int alpha = (int) (drop.baseAlpha * d);
+                    if (alpha <= 2) continue;
+                    glyphPaint.setColor(withAlphaInt(trailColor, alpha));
+                    canvas.drawText(glyphBuf, 0, 1, drop.x, charY, glyphPaint);
+                    if (i == 1 && ghostOffset > 0f) {
+                        // 仅第二个尾部字符额外画一遍偏移亮色，廉价补回原本的近距光晕
+                        glyphPaint.setColor(withAlphaInt(colHeadGlow, Math.min(alpha, 110)));
+                        canvas.drawText(glyphBuf, 0, 1, drop.x + ghostOffset, charY - ghostOffset, glyphPaint);
+                    }
                 }
             }
         }
     }
 
     private void drawImpactParticles(Canvas canvas) {
-        for (ImpactParticle particle : particles) {
+        for (int i = 0, n = particles.size(); i < n; i++) {
+            ImpactParticle particle = particles.get(i);
             int alpha = (int) (255 * particle.alpha);
-            particlePaint.setColor(withAlpha(particle.color, alpha));
+            particlePaint.setColor(withAlphaInt(particle.color, alpha));
             canvas.drawRect(
                     particle.x - particle.size * 0.5f,
                     particle.y - particle.size * 0.5f,
@@ -300,15 +415,17 @@ public class CodeRainView extends View {
     }
 
     private void drawGroundRipples(Canvas canvas) {
+        // 涟漪原本依赖 setShadowLayer 做软发光，硬件加速下成本高；
+        // 改为同一椭圆/弧线连画两道：外圈宽淡 + 内圈细亮，肉眼接近原观感。
         for (GroundRipple ripple : ripples) {
             int outerAlpha = (int) (255 * ripple.alpha);
             float width = ripple.radius * ripple.aspectX;
             float height = ripple.radius * ripple.aspectY;
 
-            ripplePaint.setStrokeWidth(ripple.thickness);
-            ripplePaint.setColor(withAlpha(lightPalette ? "#CFFFFC" : "#8EFFE7", Math.min(180, outerAlpha)));
-            ripplePaint.setShadowLayer(dp(10f), 0f, 0f,
-                    withAlpha(lightPalette ? "#AFFFF9" : "#46FFD2", Math.min(120, outerAlpha)));
+            // 外圈"伪光晕"：低 alpha、更宽的描边
+            ripplePaint.setStrokeWidth(ripple.thickness * 2.2f);
+            ripplePaint.setColor(withAlphaInt(lightPalette ? 0x00AFFFF9 : 0x0046FFD2,
+                    Math.min(70, (int) (outerAlpha * 0.45f))));
             canvas.drawOval(
                     ripple.x - width,
                     ripple.y - height,
@@ -317,10 +434,21 @@ public class CodeRainView extends View {
                     ripplePaint
             );
 
-            ripplePaint.setShadowLayer(dp(5f), 0f, 0f,
-                    withAlpha(lightPalette ? "#D7FFFD" : "#74FFE0", Math.min(100, (int) (outerAlpha * 0.72f))));
+            // 主圈
+            ripplePaint.setStrokeWidth(ripple.thickness);
+            ripplePaint.setColor(withAlphaInt(lightPalette ? 0x00CFFFFC : 0x008EFFE7,
+                    Math.min(180, outerAlpha)));
+            canvas.drawOval(
+                    ripple.x - width,
+                    ripple.y - height,
+                    ripple.x + width,
+                    ripple.y + height,
+                    ripplePaint
+            );
+
+            // 内圈高亮弧
             ripplePaint.setStrokeWidth(Math.max(dp(0.8f), ripple.thickness * 0.55f));
-            ripplePaint.setColor(withAlpha(lightPalette ? "#F8FFFF" : "#CEFFF4",
+            ripplePaint.setColor(withAlphaInt(lightPalette ? 0x00F8FFFF : 0x00CEFFF4,
                     Math.min(132, (int) (outerAlpha * 0.58f))));
             canvas.drawArc(
                     ripple.x - width * 0.66f,
@@ -332,7 +460,6 @@ public class CodeRainView extends View {
                     false,
                     ripplePaint
             );
-            ripplePaint.clearShadowLayer();
         }
     }
 
@@ -346,6 +473,9 @@ public class CodeRainView extends View {
     }
 
     private void spawnImpact(float x, float y, int layer) {
+        if (particles.size() > MAX_PARTICLES || ripples.size() > MAX_RIPPLES) {
+            return;
+        }
         int count = layer == LAYER_NEAR ? 10 : (layer == LAYER_MID ? 7 : 5);
         for (int i = 0; i < count; i++) {
             float angle = (float) (random.nextFloat() * Math.PI - Math.PI / 1.7f);
@@ -354,7 +484,7 @@ public class CodeRainView extends View {
             float vy = (float) Math.sin(angle) * speed * 0.58f - dp(12f);
             float size = dp(layer == LAYER_NEAR ? 3.2f : layer == LAYER_MID ? 2.4f : 1.8f);
             float fade = layer == LAYER_NEAR ? 2.6f : 2.1f;
-            String color = i % 3 == 0 ? "#F3FFF9" : (lightPalette ? "#C9FFF7" : "#5DFFD1");
+            int color = i % 3 == 0 ? colImpactWhite : colImpactNeon;
             particles.add(new ImpactParticle(x, y, vx, vy, size, fade, color));
         }
         spawnGroundRipple(x, y, layer);
@@ -429,6 +559,22 @@ public class CodeRainView extends View {
         groundPaint.setColor(lightPalette ? Color.parseColor("#9EDFD7") : Color.parseColor("#4CF1C9"));
         scanlinePaint.setColor(lightPalette ? Color.parseColor("#12A3B8C4") : Color.parseColor("#08D7FFF0"));
         gridPaint.setColor(lightPalette ? Color.parseColor("#7EBEB7") : Color.parseColor("#45DEC8"));
+
+        colHeadCore = Color.parseColor(lightPalette ? "#FFFFFF" : "#F2FFF8");
+        colHeadGlow = Color.parseColor(lightPalette ? "#F7FFFF" : "#B8FFF2");
+        colHeadShadowNear = Color.parseColor(lightPalette ? "#D1FFF8" : "#61FFD3");
+        colHeadShadowMid = Color.parseColor(lightPalette ? "#D1FFF8" : "#61FFD3");
+        colTrailFar = Color.parseColor(lightPalette ? "#B4FFF8" : "#4CF4C5");
+        colTrailMid = Color.parseColor(lightPalette ? "#B9FFF9" : "#66FFD2");
+        colTrailNear = Color.parseColor(lightPalette ? "#D4FFFB" : "#8FFFE2");
+        colImpactWhite = Color.parseColor("#F3FFF9");
+        colImpactNeon = Color.parseColor(lightPalette ? "#C9FFF7" : "#5DFFD1");
+        staticOverlayDirty = true;
+    }
+
+    private static int withAlphaInt(int color, int alpha) {
+        int a = alpha < 0 ? 0 : (alpha > 255 ? 255 : alpha);
+        return (a << 24) | (color & 0x00FFFFFF);
     }
 
     private float lerp(float start, float end, float amount) {
@@ -440,13 +586,55 @@ public class CodeRainView extends View {
     }
 
     private int withAlpha(String colorString, int alpha) {
-        int color = Color.parseColor(colorString);
+        Integer cached = colorCache.get(colorString);
+        int color = cached != null ? cached : Color.parseColor(colorString);
+        if (cached == null) {
+            colorCache.put(colorString, color);
+        }
         return Color.argb(
                 Math.max(0, Math.min(255, alpha)),
                 Color.red(color),
                 Color.green(color),
                 Color.blue(color)
         );
+    }
+
+    private void scheduleNextFrame() {
+        if (rainEnabled && attachedToWindow && getVisibility() == VISIBLE && isShown()) {
+            // 与显示刷新率对齐，争取 60fps 的流畅观感
+            postInvalidateOnAnimation();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        attachedToWindow = true;
+        if (rainEnabled) {
+            lastFrameTime = 0L;
+            invalidate();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        attachedToWindow = false;
+        lastFrameTime = 0L;
+        if (staticOverlay != null) {
+            staticOverlay.recycle();
+            staticOverlay = null;
+            staticOverlayDirty = true;
+        }
+        super.onDetachedFromWindow();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == VISIBLE && rainEnabled) {
+            lastFrameTime = 0L;
+            invalidate();
+        }
     }
 
     private static final class Drop {
@@ -462,6 +650,7 @@ public class CodeRainView extends View {
         final float driftAmplitude;
         float phase;
         final float phaseSpeed;
+        float lastTextSize = -1f;
 
         private Drop(float x,
                      float y,
@@ -497,10 +686,10 @@ public class CodeRainView extends View {
         float vy;
         final float size;
         final float fadeSpeed;
-        final String color;
+        final int color;
         float alpha = 1f;
 
-        private ImpactParticle(float x, float y, float vx, float vy, float size, float fadeSpeed, String color) {
+        private ImpactParticle(float x, float y, float vx, float vy, float size, float fadeSpeed, int color) {
             this.x = x;
             this.y = y;
             this.vx = vx;

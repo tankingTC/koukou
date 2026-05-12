@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    登录页（B+C：品牌沉浸 + 历史账号优先）
+    布局合规要点：
+    - ConstraintLayout 根；所有间距 / 高度走 dimens token；圆角对齐规范（按钮 24dp / 卡片 16dp / 输入 12dp）
+    - hero 蝴蝶用 layout_constraintWidth_percent 限宽，避免小屏溢出（原 452dp 写死会被裁切）
+    - 移除 glow_sheen_top/bottom（视觉降噪，halo 单独保留）
+    - form_max_width 限制大屏不被拉宽
+    - 内容区滚动包裹，避免输入键盘弹起遮挡按钮
+-->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_butterfly_scene">
 
+    <!-- ===== 主题氛围装饰层（与场景背景配合，业务无关） ===== -->
     <com.example.koukou.widget.CodeRainView
         android:id="@+id/code_rain_view"
         android:layout_width="0dp"
@@ -27,274 +37,365 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.example.koukou.widget.RaindropFxView
+        android:id="@id/raindrop_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <View
         android:id="@+id/glow_halo"
-        android:layout_width="360dp"
-        android:layout_height="360dp"
-        android:alpha="0.22"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:alpha="0.18"
         android:background="@drawable/bg_butterfly_halo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 兼容旧 Java 引用：不再展示，保留 id 即可 -->
     <View
         android:id="@+id/glow_sheen_top"
-        android:layout_width="300dp"
-        android:layout_height="120dp"
-        android:alpha="0.18"
-        android:background="@drawable/bg_butterfly_sheen"
-        android:rotation="-24"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
     <View
         android:id="@+id/glow_sheen_bottom"
-        android:layout_width="240dp"
-        android:layout_height="96dp"
-        android:alpha="0.12"
-        android:background="@drawable/bg_butterfly_sheen"
-        android:rotation="22"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
 
+    <!-- ===== 品牌 hero（蝴蝶光翼） ===== -->
     <FrameLayout
         android:id="@+id/iv_hero"
-        android:layout_width="452dp"
-        android:layout_height="388dp"
-        android:layout_marginTop="-24dp"
-        android:layout_marginEnd="-96dp"
-        android:alpha="0.98"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_xl"
+        android:layout_marginEnd="@dimen/space_xxl"
+        android:alpha="0.96"
+        app:layout_constraintDimensionRatio="H,1.18:1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.62">
 
         <include layout="@layout/view_iridescent_butterfly" />
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/tv_overline"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_xl"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.14"
-        android:text="NATURE INSPIRED UI"
-        android:textAllCaps="true"
-        android:textColor="@color/butterfly_text_secondary"
-        android:textSize="12sp"
+    <!-- ===== 主滚动内容区：保证小屏 + 键盘弹起仍可滚到登录按钮 ===== -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/tv_title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:fontFamily="serif"
-        android:lineSpacingExtra="-2sp"
-        android:maxLines="2"
-        android:text="BUTTERFLY&#10;IRIDESCENCE"
-        android:textColor="@color/butterfly_text_primary"
-        android:textSize="38sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_overline"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
-
-    <TextView
-        android:id="@+id/tv_subtitle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="10dp"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        android:text="Light is alive. 使用扣扣号快速登录，回到流光蝶翼般的会话世界。"
-        android:textColor="@color/butterfly_text_secondary"
-        android:textSize="14sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_title"
-        app:layout_constraintWidth_max="@dimen/form_max_width" />
-
-    <ImageView
-        android:id="@+id/iv_logo"
-        android:layout_width="76dp"
-        android:layout_height="76dp"
-        android:layout_marginTop="@dimen/space_md"
-        android:alpha="0.0"
-        android:background="@drawable/bg_butterfly_panel"
-        android:padding="14dp"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
-        android:src="@mipmap/tubiao"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.15"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_subtitle" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cv_form"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_md"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="0dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/iv_logo"
-        app:layout_constraintWidth_max="@dimen/form_max_width"
-        app:strokeColor="#6C96DFFF"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_butterfly_glass_card"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:layout_height="wrap_content">
 
+            <!-- ===== Logo（统一 panel 容器，跟随主题） ===== -->
+            <ImageView
+                android:id="@+id/iv_logo"
+                android:layout_width="@dimen/avatar_xl"
+                android:layout_height="@dimen/avatar_xl"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_xxl"
+                android:alpha="0"
+                android:background="@drawable/bg_butterfly_panel"
+                android:padding="@dimen/space_md"
+                android:scaleX="0.85"
+                android:scaleY="0.85"
+                android:src="@mipmap/tubiao"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- ===== 品牌名 + 一句 tagline（中文统一，避免中英断裂） ===== -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_title"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="快捷登录"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_lg"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:fontFamily="serif"
+                android:lineSpacingExtra="-2sp"
+                android:text="Koukou"
                 android:textColor="@color/butterfly_text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="40sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/iv_logo"
+                app:layout_constraintWidth_max="@dimen/form_max_width" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_subtitle"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="通过扣扣号和已保存密码快速进入"
-                android:textColor="@color/butterfly_text_muted"
-                android:textSize="12sp" />
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_xs"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:text="流光蝴蝶为伴，回到熟悉的会话世界。"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_title"
+                app:layout_constraintWidth_max="@dimen/form_max_width" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_account"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
+            <!-- 给上方品牌区与下方表单一个等距视觉锚点 -->
+            <TextView
+                android:id="@+id/tv_overline"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:hint="扣扣号"
-                app:boxBackgroundColor="#9C152443"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:endIconDrawable="@android:drawable/arrow_down_float"
-                app:endIconMode="custom"
-                app:endIconTint="@color/butterfly_text_secondary"
-                app:hintTextColor="@color/butterfly_text_muted">
+                android:visibility="gone"
+                app:layout_constraintTop_toTopOf="parent" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_account"
+            <!-- ===== 历史账号卡片（首选入口） ===== -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cv_history"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_xl"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                android:visibility="gone"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="@dimen/card_radius"
+                app:cardElevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_subtitle"
+                app:layout_constraintWidth_max="@dimen/form_max_width"
+                app:strokeColor="#6C96DFFF"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:background="@drawable/bg_butterfly_glass_card"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/space_md"
+                    android:paddingVertical="@dimen/space_md">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_password"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="选择最近账号"
+                        android:textColor="@color/butterfly_text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:text="点击直接登录，左滑可删除"
+                        android:textColor="@color/butterfly_text_muted"
+                        android:textSize="12sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_history_inline"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:maxHeight="280dp"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===== 「使用其他账号」分割切换按钮 ===== -->
+            <TextView
+                android:id="@+id/btn_use_other"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_secondary_height"
+                android:layout_marginTop="@dimen/space_md"
+                android:background="@drawable/bg_profile_btn_outline"
+                android:gravity="center"
+                android:minWidth="160dp"
+                android:paddingHorizontal="@dimen/space_lg"
+                android:text="使用其他账号"
+                android:textColor="@color/butterfly_text_primary"
+                android:textSize="13sp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cv_history" />
+
+            <!-- ===== 表单卡片（无历史 / 用户主动展开时可见） ===== -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cv_form"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_md"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="@dimen/card_radius"
+                app:cardElevation="0dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/btn_use_other"
+                app:layout_constraintWidth_max="@dimen/form_max_width"
+                app:strokeColor="#6C96DFFF"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_butterfly_glass_card"
+                    android:orientation="vertical"
+                    android:padding="@dimen/dialog_padding">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="账号登录"
+                        android:textColor="@color/butterfly_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:text="输入扣扣号与密码进入"
+                        android:textColor="@color/butterfly_text_muted"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_account"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:hint="扣扣号"
+                        app:boxBackgroundColor="@color/butterfly_input_bg_strong"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:endIconDrawable="@android:drawable/arrow_down_float"
+                        app:endIconMode="custom"
+                        app:endIconTint="@color/butterfly_text_secondary"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_account"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_password"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:hint="密码"
+                        app:boxBackgroundColor="@color/butterfly_input_bg_strong"
+                        app:boxCornerRadiusBottomEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusBottomStart="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopEnd="@dimen/input_corner_radius"
+                        app:boxCornerRadiusTopStart="@dimen/input_corner_radius"
+                        app:boxStrokeColor="@color/butterfly_stroke"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="@color/butterfly_text_secondary"
+                        app:hintTextColor="@color/butterfly_text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/input_min_height"
+                            android:textColor="@color/butterfly_text_primary"
+                            android:textColorHint="@color/butterfly_text_muted" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ===== 主按钮 ===== -->
+            <FrameLayout
+                android:id="@+id/fl_login"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/page_horizontal_padding"
+                android:layout_marginTop="@dimen/space_lg"
+                android:layout_marginEnd="@dimen/page_horizontal_padding"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cv_form"
+                app:layout_constraintWidth_max="@dimen/form_max_width">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_primary_height"
+                    android:background="@drawable/bg_button_gradient_28"
+                    android:text="登录"
+                    android:textColor="@color/butterfly_pearl"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@null"
+                    app:cornerRadius="@dimen/button_primary_corner" />
+
+                <ProgressBar
+                    android:id="@+id/pb_loading"
+                    android:layout_width="@dimen/space_lg"
+                    android:layout_height="@dimen/space_lg"
+                    android:layout_gravity="center"
+                    android:elevation="10dp"
+                    android:indeterminateTint="@color/butterfly_pearl"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tv_register"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_md"
-                android:hint="密码"
-                app:boxBackgroundColor="#9C152443"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/butterfly_stroke"
-                app:endIconMode="password_toggle"
-                app:endIconTint="@color/butterfly_text_secondary"
-                app:hintTextColor="@color/butterfly_text_muted">
+                android:layout_marginBottom="@dimen/space_lg"
+                android:paddingHorizontal="@dimen/space_md"
+                android:paddingVertical="@dimen/space_sm"
+                android:text="没有账号？点击注册"
+                android:textColor="@color/butterfly_text_secondary"
+                android:textSize="13sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/fl_login" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_password"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:minHeight="@dimen/input_min_height"
-                    android:textColor="@color/butterfly_text_primary"
-                    android:textColorHint="@color/butterfly_text_muted" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <FrameLayout
-        android:id="@+id/fl_login"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/page_horizontal_padding"
-        android:layout_marginTop="@dimen/space_lg"
-        android:layout_marginEnd="@dimen/page_horizontal_padding"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/cv_form"
-        app:layout_constraintWidth_max="@dimen/form_max_width">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_login"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:background="@drawable/bg_button_gradient_28"
-            android:text="登录"
-            android:textColor="@color/butterfly_pearl"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:backgroundTint="@null"
-            app:cornerRadius="29dp" />
-
-        <ProgressBar
-            android:id="@+id/pb_loading"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:elevation="10dp"
-            android:indeterminateTint="@color/butterfly_pearl"
-            android:visibility="gone" />
-    </FrameLayout>
-
-    <TextView
-        android:id="@+id/tv_register"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_md"
-        android:paddingHorizontal="@dimen/space_md"
-        android:paddingVertical="10dp"
-        android:text="没有账号？点击注册"
-        android:textColor="@color/butterfly_text_secondary"
-        android:textSize="13sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/fl_login" />
-
+    <!-- 兼容旧 Java 引用 layoutHistory.cardRoot / rvHistory（dropdown 模式不再使用，但保留 binding 字段避免 NPE） -->
     <include
         android:id="@+id/layout_history"
         layout="@layout/layout_account_history"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/iv_logo" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
