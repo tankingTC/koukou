@@ -27,8 +27,8 @@ android {
         }
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "API_BASE_URL", "\"https://api.yourdomain.com\"")
-            buildConfigField("String", "WS_URL", "\"wss://api.yourdomain.com/ws\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://zzj.abrdns.com\"")
+            buildConfigField("String", "WS_URL", "\"wss://zzj.abrdns.com/ws\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
