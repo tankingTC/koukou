@@ -57,6 +57,7 @@ public class ContactsFragment extends Fragment {
         setupRecyclerView();
         observeViewModel();
         observeAppearance();
+        viewModel.refreshRemoteState(null);
 
         binding.toolbar.setAlpha(0f);
         binding.toolbar.setTranslationY(-50f);
@@ -300,6 +301,14 @@ public class ContactsFragment extends Fragment {
                 adapter.notifyDataSetChanged();
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (viewModel != null) {
+            viewModel.refreshRemoteState(null);
+        }
     }
 
     @Override

@@ -23,6 +23,20 @@ CREATE TABLE IF NOT EXISTS friends (
     INDEX idx_friends_owner (owner_id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS friend_requests (
+    request_id     VARCHAR(96) PRIMARY KEY,
+    from_user_id   VARCHAR(32) NOT NULL,
+    from_nickname  VARCHAR(64),
+    from_avatar    TEXT,
+    to_user_id     VARCHAR(32) NOT NULL,
+    message        TEXT,
+    status         VARCHAR(16) NOT NULL,
+    created_at     BIGINT      NOT NULL,
+    updated_at     BIGINT      NOT NULL,
+    INDEX idx_friend_req_to_status (to_user_id, status, created_at),
+    INDEX idx_friend_req_from_to (from_user_id, to_user_id, status)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS messages (
     message_id        VARCHAR(64)  PRIMARY KEY,
     client_message_id VARCHAR(64),

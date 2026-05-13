@@ -1,5 +1,7 @@
 package com.example.koukou.data.repository;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 
 import com.example.koukou.data.local.dao.ConversationDao;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 public class MessageRepository implements AppWebSocketListener {
     private static final long ACK_TIMEOUT_MS = 15_000L;
+    private static final String TAG = "MessageRepository";
     private static volatile MessageRepository INSTANCE;
     private final MessageDao messageDao;
     private final ConversationDao conversationDao;
@@ -124,26 +127,33 @@ public class MessageRepository implements AppWebSocketListener {
 
     @Override
     public void onMessageReceived(WebSocketMessage message) {
-        if (message == null || message.type == null) {
+        if (message == null || message.type == null || message.type.trim().isEmpty()) {
             return;
         }
-        switch (message.type) {
-            case "message_ack":
-            case "ack":
-                handleAck(message);
-                break;
-            case "chat_message":
-            case "message":
-                handleIncomingMessage(message);
-                break;
-            case "sync_response":
-                handleSyncResponse(message);
-                break;
-            case "profile_update":
-                handleProfileUpdate(message);
-                break;
-            default:
-                break;
+        try {
+            switch (message.type) {
+                case "error":
+                    handleServerError(message);
+                    break;
+                case "message_ack":
+                case "ack":
+                    handleAck(message);
+                    break;
+                case "chat_message":
+                case "message":
+                    handleIncomingMessage(message);
+                    break;
+                case "sync_response":
+                    handleSyncResponse(message);
+                    break;
+                case "profile_update":
+                    handleProfileUpdate(message);
+                    break;
+                default:
+                    break;
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Unhandled websocket message crashed repository, type=" + message.type, t);
         }
     }
 
@@ -180,53 +190,78 @@ public class MessageRepository implements AppWebSocketListener {
 
     private void handleAck(WebSocketMessage message) {
         appExecutors.diskIO().execute(() -> {
-            if (message.clientMessageId == null || message.clientMessageId.trim().isEmpty()) {
-                return;
+            try {
+                if (message.clientMessageId == null || message.clientMessageId.trim().isEmpty()) {
+                    return;
+                }
+                String status = message.status == null || message.status.trim().isEmpty() ? "sent" : message.status;
+                long serverTime = message.serverTimestamp > 0 ? message.serverTimestamp : System.currentTimeMillis();
+                messageDao.applyAck(message.clientMessageId, message.messageId, status, serverTime);
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to handle websocket ack", t);
             }
-            String status = message.status == null || message.status.trim().isEmpty() ? "sent" : message.status;
-            long serverTime = message.serverTimestamp > 0 ? message.serverTimestamp : System.currentTimeMillis();
-            messageDao.applyAck(message.clientMessageId, message.messageId, status, serverTime);
+        });
+    }
+
+    private void handleServerError(WebSocketMessage message) {
+        appExecutors.diskIO().execute(() -> {
+            try {
+                if (message.clientMessageId == null || message.clientMessageId.trim().isEmpty()) {
+                    return;
+                }
+                MessageEntity local = messageDao.getMessageByClientId(message.clientMessageId);
+                if (local != null && "sending".equals(local.status)) {
+                    messageDao.updateMessageStatus(local.messageId, "failed");
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to handle websocket server error", t);
+            }
         });
     }
 
     private void handleIncomingMessage(WebSocketMessage message) {
         appExecutors.diskIO().execute(() -> {
-            String ownerId = firstNonEmpty(message.toUserId, message.to);
-            String targetId = firstNonEmpty(message.fromUserId, message.from);
-            if (ownerId == null || targetId == null || !currentUserId.equals(ownerId)) {
-                return;
+            try {
+                String ownerId = firstNonEmpty(message.toUserId, message.to);
+                String targetId = firstNonEmpty(message.fromUserId, message.from);
+                if (ownerId == null || targetId == null || !currentUserId.equals(ownerId)) {
+                    return;
+                }
+
+                String serverMessageId = firstNonEmpty(message.messageId, message.clientMessageId);
+                if (serverMessageId != null && messageDao.getMessageByServerId(serverMessageId) != null) {
+                    return;
+                }
+                if (message.clientMessageId != null && messageDao.getMessageBySenderAndClientId(targetId, message.clientMessageId) != null) {
+                    return;
+                }
+
+                long time = message.serverTimestamp > 0
+                        ? message.serverTimestamp
+                        : (message.timestamp > 0 ? message.timestamp : System.currentTimeMillis());
+                String safeContent = message.content == null ? "" : message.content;
+
+                MessageEntity entity = new MessageEntity();
+                entity.messageId = buildLocalMessageId(ownerId, serverMessageId != null ? serverMessageId : generateClientMessageId());
+                entity.clientMessageId = message.clientMessageId;
+                entity.serverMessageId = message.messageId;
+                entity.conversationId = ownerId + "_" + targetId;
+                entity.senderId = targetId;
+                entity.receiverId = ownerId;
+                entity.content = safeContent;
+                entity.msgType = safeType(message.msgType);
+                entity.timestamp = time;
+                entity.chatType = safeChatType(message.chatType);
+                entity.status = "received";
+                entity.isRead = false;
+                entity.retryCount = 0;
+                entity.serverTimestamp = message.serverTimestamp;
+
+                messageDao.insertMessage(entity);
+                upsertConversation(ownerId, targetId, safeContent, time, true, message.senderNickname, message.senderAvatar);
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to persist incoming websocket message", t);
             }
-
-            String serverMessageId = firstNonEmpty(message.messageId, message.clientMessageId);
-            if (serverMessageId != null && messageDao.getMessageByServerId(serverMessageId) != null) {
-                return;
-            }
-            if (message.clientMessageId != null && messageDao.getMessageBySenderAndClientId(targetId, message.clientMessageId) != null) {
-                return;
-            }
-
-            long time = message.serverTimestamp > 0
-                    ? message.serverTimestamp
-                    : (message.timestamp > 0 ? message.timestamp : System.currentTimeMillis());
-
-            MessageEntity entity = new MessageEntity();
-            entity.messageId = buildLocalMessageId(ownerId, serverMessageId != null ? serverMessageId : generateClientMessageId());
-            entity.clientMessageId = message.clientMessageId;
-            entity.serverMessageId = message.messageId;
-            entity.conversationId = ownerId + "_" + targetId;
-            entity.senderId = targetId;
-            entity.receiverId = ownerId;
-            entity.content = message.content;
-            entity.msgType = safeType(message.msgType);
-            entity.timestamp = time;
-            entity.chatType = safeChatType(message.chatType);
-            entity.status = "received";
-            entity.isRead = false;
-            entity.retryCount = 0;
-            entity.serverTimestamp = message.serverTimestamp;
-
-            messageDao.insertMessage(entity);
-            upsertConversation(ownerId, targetId, message.content, time, true, message.senderNickname, message.senderAvatar);
         });
     }
 
@@ -241,46 +276,64 @@ public class MessageRepository implements AppWebSocketListener {
 
     private void handleProfileUpdate(WebSocketMessage message) {
         appExecutors.diskIO().execute(() -> {
-            String potentialTargetId = firstNonEmpty(message.fromUserId, message.from);
-            if (potentialTargetId == null) {
-                return;
-            }
-            ConversationEntity conv = conversationDao.getConversationSync(currentUserId + "_" + potentialTargetId);
-            if (conv != null) {
-                if (message.senderNickname != null) {
-                    conv.targetName = message.senderNickname;
+            try {
+                String potentialTargetId = firstNonEmpty(message.fromUserId, message.from);
+                if (potentialTargetId == null) {
+                    return;
                 }
-                if (message.senderAvatar != null) {
-                    conv.targetAvatarUrl = message.senderAvatar;
+                ConversationEntity conv = conversationDao.getConversationSync(currentUserId + "_" + potentialTargetId);
+                if (conv != null) {
+                    if (message.senderNickname != null) {
+                        conv.targetName = message.senderNickname;
+                    }
+                    if (message.senderAvatar != null) {
+                        conv.targetAvatarUrl = message.senderAvatar;
+                    }
+                    conversationDao.insertOrUpdate(conv);
                 }
-                conversationDao.insertOrUpdate(conv);
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to handle profile update message", t);
             }
         });
     }
 
     private void requestOfflineSync() {
         appExecutors.diskIO().execute(() -> {
-            Long latest = messageDao.getLatestTimestampForUser(currentUserId);
-            WebSocketMessage request = new WebSocketMessage();
-            request.type = "sync_request";
-            request.fromUserId = currentUserId;
-            request.from = currentUserId;
-            request.lastMessageTime = latest == null ? 0L : latest;
-            webSocketManager.sendMessage(request);
+            try {
+                if (currentUserId == null || currentUserId.trim().isEmpty()) {
+                    return;
+                }
+                Long latest = messageDao.getLatestTimestampForUser(currentUserId);
+                WebSocketMessage request = new WebSocketMessage();
+                request.type = "sync_request";
+                request.fromUserId = currentUserId;
+                request.from = currentUserId;
+                request.lastMessageTime = latest == null ? 0L : latest;
+                webSocketManager.sendMessage(request);
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to request offline sync", t);
+            }
         });
     }
 
     private void resendSendingMessages() {
         appExecutors.diskIO().execute(() -> {
-            List<MessageEntity> pending = messageDao.getPendingMessages(currentUserId);
-            if (pending == null) {
-                return;
-            }
-            for (MessageEntity message : pending) {
-                if ("sending".equals(message.status)) {
-                    sendOverSocket(message);
-                    scheduleAckTimeout(message.messageId);
+            try {
+                if (currentUserId == null || currentUserId.trim().isEmpty()) {
+                    return;
                 }
+                List<MessageEntity> pending = messageDao.getPendingMessages(currentUserId);
+                if (pending == null) {
+                    return;
+                }
+                for (MessageEntity message : pending) {
+                    if ("sending".equals(message.status)) {
+                        sendOverSocket(message);
+                        scheduleAckTimeout(message.messageId);
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to resend pending messages", t);
             }
         });
     }

@@ -14,6 +14,7 @@ public class UserHelper {
     private static final String KEY_ACCOUNT = "current_account";
     private static final String KEY_PASSWORD = "current_password";
     private static final String KEY_USER_ID = "current_user_id";
+    private static final String KEY_AUTH_TOKEN = "current_auth_token";
     private static final String KEY_NICKNAME = "current_nickname";
     private static final String KEY_AVATAR = "current_avatar";
     private static final String KEY_SIGNATURE = "current_signature";
@@ -45,11 +46,16 @@ public class UserHelper {
     }
 
     public static void saveUser(Context context, String account, String password, String userId) {
+        saveUser(context, account, password, userId, null);
+    }
+
+    public static void saveUser(Context context, String account, String password, String userId, String authToken) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         prefs.edit()
                 .putString(KEY_ACCOUNT, account)
                 .putString(KEY_PASSWORD, password)
                 .putString(KEY_USER_ID, userId)
+                .putString(KEY_AUTH_TOKEN, authToken)
                 .apply();
     }
 
@@ -59,9 +65,11 @@ public class UserHelper {
         }
 
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String authToken = prefs.getString(KEY_AUTH_TOKEN, null);
         SharedPreferences.Editor editor = prefs.edit()
                 .putString(KEY_ACCOUNT, newAccount)
-                .putString(KEY_USER_ID, userId);
+                .putString(KEY_USER_ID, userId)
+                .putString(KEY_AUTH_TOKEN, authToken);
         if (password != null) {
             editor.putString(KEY_PASSWORD, password);
         }
@@ -172,6 +180,7 @@ public class UserHelper {
                 .remove(KEY_ACCOUNT)
                 .remove(KEY_PASSWORD)
                 .remove(KEY_USER_ID)
+                .remove(KEY_AUTH_TOKEN)
                 .remove(KEY_NICKNAME)
                 .remove(KEY_AVATAR)
                 .remove(KEY_SIGNATURE)
@@ -191,6 +200,11 @@ public class UserHelper {
     public static String getUserId(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         return prefs.getString(KEY_USER_ID, null);
+    }
+
+    public static String getAuthToken(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        return prefs.getString(KEY_AUTH_TOKEN, null);
     }
 
     public static String getNickname(Context context) {

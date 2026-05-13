@@ -2,6 +2,7 @@ package com.example.koukou.data.local.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 @Entity(tableName = "users")
@@ -15,4 +16,7 @@ public class UserEntity {
     public String nickname;
     public String avatarUrl;
     public String signature;
+
+    @Ignore
+    public String authToken;
 }

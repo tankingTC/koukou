@@ -4,8 +4,11 @@ import android.content.Context;
 
 import com.example.koukou.data.local.dao.UserDao;
 import com.example.koukou.data.local.entity.UserEntity;
+import com.example.koukou.network.api.KoukouApiService;
 import com.example.koukou.utils.AppExecutors;
 import com.example.koukou.utils.UserHelper;
+
+import java.io.IOException;
 
 public class UserRepository {
     private static final int KOUKOU_ID_LENGTH = 10;
@@ -13,10 +16,12 @@ public class UserRepository {
 
     private final UserDao userDao;
     private final AppExecutors appExecutors;
+    private final KoukouApiService apiService;
 
     public UserRepository(UserDao userDao, AppExecutors appExecutors) {
         this.userDao = userDao;
         this.appExecutors = appExecutors;
+        this.apiService = KoukouApiService.getInstance();
     }
 
     public interface Callback {
@@ -30,26 +35,21 @@ public class UserRepository {
     }
 
     public void login(String account, String password, Callback callback) {
-        appExecutors.diskIO().execute(() -> {
+        appExecutors.networkIO().execute(() -> {
             try {
                 String loginAccount = account == null ? "" : account.trim();
-                UserEntity user = userDao.getUser(loginAccount);
-                if (user == null) {
-                    user = userDao.getUserByAccount(loginAccount);
-                }
-
-                if (user == null) {
-                    appExecutors.mainThread().execute(() -> callback.onError("该扣扣号不存在，请先注册"));
+                KoukouApiService.AuthResult remote = apiService.login(loginAccount, password);
+                UserEntity user = remote.toUserEntity(password);
+                persistUser(user);
+                appExecutors.mainThread().execute(() -> callback.onSuccess(user));
+            } catch (KoukouApiService.ApiException apiError) {
+                if (shouldFallbackToLocal(apiError)) {
+                    loginLocal(account, password, callback);
                     return;
                 }
-
-                if (user.password != null && !user.password.equals(password)) {
-                    appExecutors.mainThread().execute(() -> callback.onError("密码错误"));
-                    return;
-                }
-
-                UserEntity finalUser = user;
-                appExecutors.mainThread().execute(() -> callback.onSuccess(finalUser));
+                appExecutors.mainThread().execute(() -> callback.onError(mapLoginApiError(apiError)));
+            } catch (IOException ioException) {
+                loginLocal(account, password, callback);
             } catch (Exception e) {
                 appExecutors.mainThread().execute(() -> callback.onError("登录异常: " + e.getMessage()));
             }
@@ -57,7 +57,7 @@ public class UserRepository {
     }
 
     public void register(String nickname, String preferredKoukouId, String password, Callback callback) {
-        appExecutors.diskIO().execute(() -> {
+        appExecutors.networkIO().execute(() -> {
             try {
                 String normalizedNickname = nickname == null ? "" : nickname.trim();
                 if (normalizedNickname.isEmpty()) {
@@ -66,17 +66,14 @@ public class UserRepository {
                 }
 
                 String koukouId = resolveRegisterKoukouId(preferredKoukouId);
-
-                UserEntity user = new UserEntity();
-                user.userId = koukouId;
-                user.account = koukouId;
-                user.password = password;
-                user.nickname = normalizedNickname;
-                user.avatarUrl = "ic_avatar_" + ((int) (Math.random() * 6) + 1);
-                user.signature = DEFAULT_SIGNATURE;
-
-                userDao.insertUser(user);
+                KoukouApiService.AuthResult remote = apiService.register(normalizedNickname, koukouId, password);
+                UserEntity user = remote.toUserEntity(password);
+                persistUser(user);
                 appExecutors.mainThread().execute(() -> callback.onSuccess(user));
+            } catch (KoukouApiService.ApiException apiError) {
+                appExecutors.mainThread().execute(() -> callback.onError(mapRegisterApiError(apiError)));
+            } catch (IOException ioException) {
+                appExecutors.mainThread().execute(() -> callback.onError("无法连接服务器，请检查网络后重试"));
             } catch (Exception e) {
                 appExecutors.mainThread().execute(() -> callback.onError("注册异常: " + e.getMessage()));
             }
@@ -84,10 +81,16 @@ public class UserRepository {
     }
 
     public void generateAvailableKoukouId(IdCallback callback) {
-        appExecutors.diskIO().execute(() -> {
+        appExecutors.networkIO().execute(() -> {
             try {
-                String koukouId = generateRandomUniqueKoukouId();
-                appExecutors.mainThread().execute(() -> callback.onSuccess(koukouId));
+                String koukouId;
+                try {
+                    koukouId = apiService.generateAvailableKoukouId();
+                } catch (Exception ignored) {
+                    koukouId = generateRandomUniqueKoukouId();
+                }
+                final String finalKoukouId = koukouId;
+                appExecutors.mainThread().execute(() -> callback.onSuccess(finalKoukouId));
             } catch (Exception e) {
                 appExecutors.mainThread().execute(() -> callback.onError("生成扣扣号失败: " + e.getMessage()));
             }
@@ -131,18 +134,54 @@ public class UserRepository {
         });
     }
 
+    private void loginLocal(String account, String password, Callback callback) {
+        appExecutors.diskIO().execute(() -> {
+            try {
+                String loginAccount = account == null ? "" : account.trim();
+                UserEntity user = userDao.getUser(loginAccount);
+                if (user == null) {
+                    user = userDao.getUserByAccount(loginAccount);
+                }
+
+                if (user == null) {
+                    appExecutors.mainThread().execute(() -> callback.onError("该扣扣号不存在，请先注册"));
+                    return;
+                }
+
+                if (user.password != null && !user.password.equals(password)) {
+                    appExecutors.mainThread().execute(() -> callback.onError("密码错误"));
+                    return;
+                }
+
+                UserEntity finalUser = user;
+                appExecutors.mainThread().execute(() -> callback.onSuccess(finalUser));
+            } catch (Exception e) {
+                appExecutors.mainThread().execute(() -> callback.onError("登录异常: " + e.getMessage()));
+            }
+        });
+    }
+
+    private void persistUser(UserEntity user) {
+        if (user == null) {
+            return;
+        }
+        UserEntity localUser = new UserEntity();
+        localUser.userId = safe(user.userId);
+        localUser.account = safe(user.account, localUser.userId);
+        localUser.password = user.password;
+        localUser.nickname = safe(user.nickname, localUser.account);
+        localUser.avatarUrl = safe(user.avatarUrl, "ic_avatar_1");
+        localUser.signature = safe(user.signature, DEFAULT_SIGNATURE);
+        userDao.insertUser(localUser);
+    }
+
     private String resolveRegisterKoukouId(String preferredKoukouId) {
         String candidate = normalizeKoukouId(preferredKoukouId);
         if (preferredKoukouId == null || preferredKoukouId.trim().isEmpty()) {
-            return generateRandomUniqueKoukouId();
+            return generateRandomKoukouId();
         }
-
         if (candidate.isEmpty()) {
             throw new IllegalArgumentException("扣扣号必须是 10 位数字");
-        }
-
-        if (isKoukouIdTaken(candidate)) {
-            throw new IllegalArgumentException("该扣扣号已被注册，请更换后重试");
         }
         return candidate;
     }
@@ -184,5 +223,41 @@ public class UserRepository {
     private String generateRandomKoukouId() {
         long randomId = (long) (Math.random() * 9000000000L) + 1000000000L;
         return String.valueOf(randomId);
+    }
+
+    private boolean shouldFallbackToLocal(KoukouApiService.ApiException apiError) {
+        return apiError != null && apiError.httpCode >= 500;
+    }
+
+    private String mapLoginApiError(KoukouApiService.ApiException apiError) {
+        if (apiError == null) {
+            return "登录失败";
+        }
+        if ("invalid_credentials".equals(apiError.errorCode)) {
+            return "扣扣号或密码错误";
+        }
+        return "服务器登录失败: " + apiError.getMessage();
+    }
+
+    private String mapRegisterApiError(KoukouApiService.ApiException apiError) {
+        if (apiError == null) {
+            return "注册失败";
+        }
+        if (apiError.httpCode == 409 || apiError.httpCode == 400 || "user_exists".equals(apiError.errorCode)) {
+            return "该扣扣号已被注册，请更换后重试";
+        }
+        return "服务器注册失败: " + apiError.getMessage();
+    }
+
+    private String safe(String value) {
+        return safe(value, "");
+    }
+
+    private String safe(String value, String fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? fallback : trimmed;
     }
 }

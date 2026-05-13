@@ -335,7 +335,7 @@ public class LoginActivity extends AppCompatActivity {
             String account = user.account != null ? user.account : "";
             String password = binding.etPassword.getText() == null ? "" : binding.etPassword.getText().toString();
             UserHelper.saveLoginHistory(this, account, password, user.nickname, user.avatarUrl);
-            UserHelper.saveUser(this, account, password, user.userId);
+            UserHelper.saveUser(this, account, password, user.userId, user.authToken);
             UserHelper.saveProfile(this, user.nickname, user.avatarUrl, user.signature);
 
             showTip("登录成功，欢迎回来");

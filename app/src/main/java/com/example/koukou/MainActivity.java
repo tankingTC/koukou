@@ -82,7 +82,10 @@ public class MainActivity extends AppCompatActivity {
                 UserHelper.getNickname(this),
                 UserHelper.getAvatar(this)
         );
-        if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+        String authToken = UserHelper.getAuthToken(this);
+        if (authToken != null && !authToken.trim().isEmpty()) {
+            WebSocketManager.getInstance().connect(authToken);
+        } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
             WebSocketManager.getInstance().connect(currentUserId);
         }
 

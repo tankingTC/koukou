@@ -40,6 +40,10 @@ public class ContactsViewModel extends ViewModel {
         repository.addFriend(myAccount, friendAccount, callback);
     }
 
+    public void refreshRemoteState(ContactRepository.Callback callback) {
+        repository.refreshRemoteState(currentUserId, callback);
+    }
+
     public void acceptFriendRequest(String requestId, ContactRepository.Callback callback) {
         repository.acceptFriendRequest(currentUserId, requestId, callback);
     }

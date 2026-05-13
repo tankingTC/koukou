@@ -94,7 +94,7 @@ public class FriendProfileActivity extends AppCompatActivity {
 
     private void performDelete() {
         AppDatabase db = AppDatabase.getInstance(this);
-        ContactRepository repo = ContactRepository.getInstance(db.friendDao(), db.friendRequestDao(), db.userDao(), AppExecutors.getInstance());
+        ContactRepository repo = ContactRepository.getInstance(this, db.friendDao(), db.friendRequestDao(), db.userDao(), AppExecutors.getInstance());
         repo.deleteFriend(currentUserId, targetId, new ContactRepository.Callback() {
             @Override
             public void onSuccess() {

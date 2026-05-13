@@ -2,6 +2,7 @@ require('dotenv').config();
 
 module.exports = {
   port: Number(process.env.PORT || 8080),
+  host: process.env.HOST || '0.0.0.0',
   jwtSecret: process.env.JWT_SECRET || '',
   allowUserIdToken: String(process.env.DEV_AUTH_ALLOW_USER_ID || 'true') === 'true',
   mysql: {

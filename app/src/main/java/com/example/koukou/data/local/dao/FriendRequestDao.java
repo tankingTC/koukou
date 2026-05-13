@@ -15,6 +15,9 @@ public interface FriendRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insert(FriendRequestEntity request);
 
+    @Query("DELETE FROM friend_requests WHERE toUserId = :userId")
+    void deleteIncomingRequestsForUser(String userId);
+
     @Query("SELECT * FROM friend_requests WHERE toUserId = :userId ORDER BY createdAt DESC")
     LiveData<List<FriendRequestEntity>> observeIncomingRequests(String userId);
 
