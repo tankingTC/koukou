@@ -23,12 +23,16 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"https://zzj.abrdns.com\"")
+            buildConfigField("String", "API_BASE_URL_BACKUP", "\"https://120.26.247.39\"")
             buildConfigField("String", "WS_URL", "\"wss://zzj.abrdns.com/ws\"")
+            buildConfigField("String", "WS_URL_BACKUP", "\"wss://120.26.247.39/ws\"")
         }
         release {
             isMinifyEnabled = false
             buildConfigField("String", "API_BASE_URL", "\"https://zzj.abrdns.com\"")
+            buildConfigField("String", "API_BASE_URL_BACKUP", "\"https://120.26.247.39\"")
             buildConfigField("String", "WS_URL", "\"wss://zzj.abrdns.com/ws\"")
+            buildConfigField("String", "WS_URL_BACKUP", "\"wss://120.26.247.39/ws\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
