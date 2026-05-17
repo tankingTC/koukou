@@ -3,6 +3,7 @@ package com.example.koukou.data.repository;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.example.koukou.data.local.dao.ConversationDao;
 import com.example.koukou.data.local.dao.MessageDao;
@@ -20,15 +21,31 @@ public class MessageRepository implements AppWebSocketListener {
     private static final long ACK_TIMEOUT_MS = 15_000L;
     private static final String TAG = "MessageRepository";
     private static volatile MessageRepository INSTANCE;
+
+    public static final class UiFeedback {
+        public final long id;
+        public final String message;
+
+        public UiFeedback(String message) {
+            this.id = System.currentTimeMillis();
+            this.message = message;
+        }
+    }
+
     private final MessageDao messageDao;
     private final ConversationDao conversationDao;
     private final AppExecutors appExecutors;
     private final WebSocketManager webSocketManager;
+    private final MutableLiveData<UiFeedback> feedbackLiveData = new MutableLiveData<>();
+
     private String currentUserId = "";
     private String currentNickname = "";
     private String currentAvatarUrl = "";
 
-    private MessageRepository(MessageDao messageDao, ConversationDao conversationDao, AppExecutors appExecutors, WebSocketManager webSocketManager) {
+    private MessageRepository(MessageDao messageDao,
+                              ConversationDao conversationDao,
+                              AppExecutors appExecutors,
+                              WebSocketManager webSocketManager) {
         this.messageDao = messageDao;
         this.conversationDao = conversationDao;
         this.appExecutors = appExecutors;
@@ -36,7 +53,10 @@ public class MessageRepository implements AppWebSocketListener {
         this.webSocketManager.addListener(this);
     }
 
-    public static MessageRepository getInstance(MessageDao messageDao, ConversationDao conversationDao, AppExecutors appExecutors, WebSocketManager webSocketManager) {
+    public static MessageRepository getInstance(MessageDao messageDao,
+                                                ConversationDao conversationDao,
+                                                AppExecutors appExecutors,
+                                                WebSocketManager webSocketManager) {
         if (INSTANCE == null) {
             synchronized (MessageRepository.class) {
                 if (INSTANCE == null) {
@@ -48,26 +68,26 @@ public class MessageRepository implements AppWebSocketListener {
     }
 
     public void setCurrentUser(String currentUserId, String currentNickname, String currentAvatarUrl) {
-        this.currentUserId = currentUserId == null ? "" : currentUserId;
-        this.currentNickname = currentNickname == null ? "" : currentNickname;
-        this.currentAvatarUrl = currentAvatarUrl == null ? "" : currentAvatarUrl;
-    }
-
-    private String getConvId(String targetId) {
-        return currentUserId + "_" + targetId;
+        this.currentUserId = safe(currentUserId);
+        this.currentNickname = safe(currentNickname);
+        this.currentAvatarUrl = safe(currentAvatarUrl);
     }
 
     public LiveData<List<MessageEntity>> getMessages(String targetId) {
-        return messageDao.getMessagesByConversation(getConvId(targetId));
+        return messageDao.getMessagesByConversation(conversationIdOf(targetId));
     }
 
     public LiveData<List<ConversationEntity>> getConversations() {
         return conversationDao.getAllConversations(currentUserId);
     }
 
+    public LiveData<UiFeedback> getFeedbackLiveData() {
+        return feedbackLiveData;
+    }
+
     public void sendMessage(String targetId, String content, String msgType, String localPath, String chatType) {
         appExecutors.diskIO().execute(() -> {
-            String displayContent = content == null ? "" : content.trim();
+            String displayContent = safe(content);
             if (displayContent.isEmpty() || currentUserId.isEmpty()) {
                 return;
             }
@@ -77,7 +97,7 @@ public class MessageRepository implements AppWebSocketListener {
             MessageEntity entity = new MessageEntity();
             entity.messageId = buildLocalMessageId(currentUserId, clientMessageId);
             entity.clientMessageId = clientMessageId;
-            entity.conversationId = getConvId(targetId);
+            entity.conversationId = conversationIdOf(targetId);
             entity.senderId = currentUserId;
             entity.receiverId = targetId;
             entity.content = displayContent;
@@ -86,6 +106,8 @@ public class MessageRepository implements AppWebSocketListener {
             entity.timestamp = now;
             entity.chatType = safeChatType(chatType);
             entity.status = "sending";
+            entity.lastErrorCode = null;
+            entity.lastErrorMessage = null;
             entity.isRead = false;
             entity.retryCount = 0;
             entity.serverTimestamp = 0L;
@@ -94,7 +116,7 @@ public class MessageRepository implements AppWebSocketListener {
             upsertConversation(currentUserId, targetId, displayContent, now, false, null, null);
 
             if (!sendOverSocket(entity)) {
-                messageDao.updateMessageStatus(entity.messageId, "failed");
+                failMessage(entity.messageId, "socket_disconnected", "当前连接不可用，消息未发送");
                 return;
             }
             scheduleAckTimeout(entity.messageId);
@@ -107,18 +129,20 @@ public class MessageRepository implements AppWebSocketListener {
             if (original == null || !"failed".equals(original.status)) {
                 return;
             }
-            if (original.clientMessageId == null || original.clientMessageId.trim().isEmpty()) {
+            if (safe(original.clientMessageId).isEmpty()) {
                 original.clientMessageId = generateClientMessageId();
             }
             long now = System.currentTimeMillis();
             original.status = "sending";
             original.timestamp = now;
             original.retryCount += 1;
+            original.lastErrorCode = null;
+            original.lastErrorMessage = null;
             messageDao.insertMessage(original);
             upsertConversation(original.senderId, original.receiverId, original.content, now, false, null, null);
 
             if (!sendOverSocket(original)) {
-                messageDao.updateMessageStatus(original.messageId, "failed");
+                failMessage(original.messageId, "socket_disconnected", "当前连接不可用，消息未发送");
                 return;
             }
             scheduleAckTimeout(original.messageId);
@@ -127,7 +151,7 @@ public class MessageRepository implements AppWebSocketListener {
 
     @Override
     public void onMessageReceived(WebSocketMessage message) {
-        if (message == null || message.type == null || message.type.trim().isEmpty()) {
+        if (message == null || safe(message.type).isEmpty()) {
             return;
         }
         try {
@@ -191,10 +215,10 @@ public class MessageRepository implements AppWebSocketListener {
     private void handleAck(WebSocketMessage message) {
         appExecutors.diskIO().execute(() -> {
             try {
-                if (message.clientMessageId == null || message.clientMessageId.trim().isEmpty()) {
+                if (safe(message.clientMessageId).isEmpty()) {
                     return;
                 }
-                String status = message.status == null || message.status.trim().isEmpty() ? "sent" : message.status;
+                String status = safe(message.status, "sent");
                 long serverTime = message.serverTimestamp > 0 ? message.serverTimestamp : System.currentTimeMillis();
                 messageDao.applyAck(message.clientMessageId, message.messageId, status, serverTime);
             } catch (Throwable t) {
@@ -206,13 +230,16 @@ public class MessageRepository implements AppWebSocketListener {
     private void handleServerError(WebSocketMessage message) {
         appExecutors.diskIO().execute(() -> {
             try {
-                if (message.clientMessageId == null || message.clientMessageId.trim().isEmpty()) {
+                if (safe(message.clientMessageId).isEmpty()) {
+                    postFeedback(mapServerErrorMessage(message));
                     return;
                 }
                 MessageEntity local = messageDao.getMessageByClientId(message.clientMessageId);
+                String reason = mapServerErrorMessage(message);
                 if (local != null && "sending".equals(local.status)) {
-                    messageDao.updateMessageStatus(local.messageId, "failed");
+                    messageDao.updateMessageFailure(local.messageId, "failed", safe(message.errorCode), reason);
                 }
+                postFeedback(reason);
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to handle websocket server error", t);
             }
@@ -239,7 +266,7 @@ public class MessageRepository implements AppWebSocketListener {
                 long time = message.serverTimestamp > 0
                         ? message.serverTimestamp
                         : (message.timestamp > 0 ? message.timestamp : System.currentTimeMillis());
-                String safeContent = message.content == null ? "" : message.content;
+                String safeContent = safe(message.content);
 
                 MessageEntity entity = new MessageEntity();
                 entity.messageId = buildLocalMessageId(ownerId, serverMessageId != null ? serverMessageId : generateClientMessageId());
@@ -253,6 +280,8 @@ public class MessageRepository implements AppWebSocketListener {
                 entity.timestamp = time;
                 entity.chatType = safeChatType(message.chatType);
                 entity.status = "received";
+                entity.lastErrorCode = null;
+                entity.lastErrorMessage = null;
                 entity.isRead = false;
                 entity.retryCount = 0;
                 entity.serverTimestamp = message.serverTimestamp;
@@ -300,7 +329,7 @@ public class MessageRepository implements AppWebSocketListener {
     private void requestOfflineSync() {
         appExecutors.diskIO().execute(() -> {
             try {
-                if (currentUserId == null || currentUserId.trim().isEmpty()) {
+                if (currentUserId.isEmpty()) {
                     return;
                 }
                 Long latest = messageDao.getLatestTimestampForUser(currentUserId);
@@ -319,7 +348,7 @@ public class MessageRepository implements AppWebSocketListener {
     private void resendSendingMessages() {
         appExecutors.diskIO().execute(() -> {
             try {
-                if (currentUserId == null || currentUserId.trim().isEmpty()) {
+                if (currentUserId.isEmpty()) {
                     return;
                 }
                 List<MessageEntity> pending = messageDao.getPendingMessages(currentUserId);
@@ -328,7 +357,10 @@ public class MessageRepository implements AppWebSocketListener {
                 }
                 for (MessageEntity message : pending) {
                     if ("sending".equals(message.status)) {
-                        sendOverSocket(message);
+                        if (!sendOverSocket(message)) {
+                            failMessage(message.messageId, "socket_disconnected", "当前连接不可用，消息未发送");
+                            continue;
+                        }
                         scheduleAckTimeout(message.messageId);
                     }
                 }
@@ -345,12 +377,47 @@ public class MessageRepository implements AppWebSocketListener {
                 appExecutors.diskIO().execute(() -> {
                     MessageEntity latest = messageDao.getMessageById(messageId);
                     if (latest != null && "sending".equals(latest.status)) {
-                        messageDao.updateMessageStatus(messageId, "failed");
+                        failMessage(messageId, "timeout", "发送超时，请检查网络后重试");
                     }
                 });
             } catch (InterruptedException ignored) {
             }
         });
+    }
+
+    private void failMessage(String messageId, String errorCode, String errorMessage) {
+        messageDao.updateMessageFailure(messageId, "failed", errorCode, errorMessage);
+        postFeedback(errorMessage);
+    }
+
+    private void postFeedback(String message) {
+        if (safe(message).isEmpty()) {
+            return;
+        }
+        appExecutors.mainThread().execute(() -> feedbackLiveData.setValue(new UiFeedback(message)));
+    }
+
+    private String mapServerErrorMessage(WebSocketMessage message) {
+        switch (safe(message.errorCode)) {
+            case "missing_receiver":
+                return "发送失败：缺少接收方";
+            case "receiver_not_found":
+                return "发送失败：对方不存在";
+            case "not_friends":
+                return "发送失败：你们还不是好友";
+            case "unauthorized":
+                return "发送失败：登录状态已失效，请重新登录";
+            case "unknown_type":
+                return "发送失败：消息类型暂不支持";
+            case "server_error":
+                return safe(message.errorMessage, "发送失败：服务器处理异常");
+            default:
+                return safe(message.errorMessage, "发送失败，请稍后重试");
+        }
+    }
+
+    private String conversationIdOf(String targetId) {
+        return currentUserId + "_" + targetId;
     }
 
     private String buildLocalMessageId(String ownerId, String id) {
@@ -371,24 +438,30 @@ public class MessageRepository implements AppWebSocketListener {
     }
 
     private String safeType(String value) {
-        return value == null || value.trim().isEmpty() ? "text" : value;
+        return safe(value, "text");
     }
 
     private String safeChatType(String value) {
-        return value == null || value.trim().isEmpty() ? "single" : value;
+        return safe(value, "single");
     }
 
     private String firstNonEmpty(String first, String second) {
-        if (first != null && !first.trim().isEmpty()) {
+        if (!safe(first).isEmpty()) {
             return first;
         }
-        if (second != null && !second.trim().isEmpty()) {
+        if (!safe(second).isEmpty()) {
             return second;
         }
         return null;
     }
 
-    private void upsertConversation(String ownerId, String targetId, String lastMessage, long time, boolean incrementUnread, String defaultName, String defaultAvatar) {
+    private void upsertConversation(String ownerId,
+                                    String targetId,
+                                    String lastMessage,
+                                    long time,
+                                    boolean incrementUnread,
+                                    String defaultName,
+                                    String defaultAvatar) {
         String convId = ownerId + "_" + targetId;
         ConversationEntity conv = conversationDao.getConversationSync(convId);
         if (conv == null) {
@@ -397,7 +470,7 @@ public class MessageRepository implements AppWebSocketListener {
             conv.ownerId = ownerId;
             conv.targetId = targetId;
             String suffix = targetId != null && targetId.length() >= 4 ? targetId.substring(targetId.length() - 4) : targetId;
-            conv.targetName = defaultName != null ? defaultName : "Friend_" + suffix;
+            conv.targetName = defaultName != null ? defaultName : "好友_" + suffix;
             conv.targetAvatarUrl = defaultAvatar != null ? defaultAvatar : "ic_avatar_1";
             conv.unreadCount = 0;
             conv.isPinned = false;
@@ -420,5 +493,17 @@ public class MessageRepository implements AppWebSocketListener {
             conv.unreadCount += 1;
         }
         conversationDao.insertOrUpdate(conv);
+    }
+
+    private String safe(String value) {
+        return safe(value, "");
+    }
+
+    private String safe(String value, String fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? fallback : trimmed;
     }
 }

@@ -1,10 +1,10 @@
 package com.example.koukou.ui.settings;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
@@ -12,7 +12,6 @@ import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -46,6 +45,11 @@ import com.example.koukou.widget.RaindropFxView;
 public class SettingsDetailActivity extends AppCompatActivity {
     public static final String EXTRA_PAGE = "settings_page";
 
+    private ActivitySettingsDetailBinding binding;
+    private SettingsViewModel viewModel;
+    private String page;
+    private ActivityResultLauncher<String> notificationPermissionLauncher;
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         try {
@@ -54,11 +58,6 @@ public class SettingsDetailActivity extends AppCompatActivity {
         }
         return super.dispatchTouchEvent(ev);
     }
-
-    private ActivitySettingsDetailBinding binding;
-    private SettingsViewModel viewModel;
-    private String page;
-    private ActivityResultLauncher<String> notificationPermissionLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -139,7 +138,9 @@ public class SettingsDetailActivity extends AppCompatActivity {
             return;
         }
         if (SettingsPage.NOTIFICATIONS.equals(page)) {
-            binding.tvPageSubtitle.setText(state.notificationsEnabled ? "当前全局通知已开启，可继续细化提醒方式。" : "当前全局通知已关闭，必要时可以重新开启。");
+            binding.tvPageSubtitle.setText(state.notificationsEnabled
+                    ? "当前全局通知已开启，可以继续细化提醒方式。"
+                    : "当前全局通知已关闭，需要时可以重新开启。");
         } else if (SettingsPage.APPEARANCE.equals(page)) {
             binding.tvPageSubtitle.setText("当前主题：" + viewModel.themeLabel(state.themeMode) + " · 背景：" + viewModel.backgroundLabel(state.chatBackground));
         } else if (SettingsPage.PRIVACY_CONTACTS.equals(page)) {
@@ -164,7 +165,7 @@ public class SettingsDetailActivity extends AppCompatActivity {
             case SettingsViewModel.KEY_VERIFY_MODE:
                 showChoiceDialog(
                         "加我为好友时",
-                        "决定别人加你时的验证方式。",
+                        "决定别人添加你时的验证方式。",
                         new String[]{"允许任何人", "需要验证", "拒绝所有人"},
                         new String[]{"allow_all", "need_verify", "deny_all"},
                         viewModel.getSettingsState().getValue() == null ? "need_verify" : viewModel.getSettingsState().getValue().friendVerificationMode,
@@ -180,13 +181,13 @@ public class SettingsDetailActivity extends AppCompatActivity {
             case SettingsViewModel.KEY_THEME_MODE:
                 showChoiceDialog(
                         "主题模式",
-                        "切换整体界面明暗基调。",
+                        "切换整体界面的明暗基调。",
                         new String[]{"跟随系统", "深色", "浅色"},
                         new String[]{"system", "dark", "light"},
                         viewModel.getSettingsState().getValue() == null ? "system" : viewModel.getSettingsState().getValue().themeMode,
                         value -> {
                             viewModel.setThemeMode(value);
-                            showTip("主题模式已切换为" + viewModel.themeLabel(value));
+                            showTip("主题模式已切换为 " + viewModel.themeLabel(value));
                         }
                 );
                 break;
@@ -199,7 +200,7 @@ public class SettingsDetailActivity extends AppCompatActivity {
                         viewModel.getSettingsState().getValue() == null ? "butterfly" : viewModel.getSettingsState().getValue().chatBackground,
                         value -> {
                             viewModel.setChatBackground(value);
-                            showTip("聊天背景已切换为" + viewModel.backgroundLabel(value));
+                            showTip("聊天背景已切换为 " + viewModel.backgroundLabel(value));
                         }
                 );
                 break;
@@ -212,7 +213,7 @@ public class SettingsDetailActivity extends AppCompatActivity {
                         viewModel.getSettingsState().getValue() == null ? "medium" : viewModel.getSettingsState().getValue().fontSize,
                         value -> {
                             viewModel.setFontSize(value);
-                            showTip("字体大小已切换为" + viewModel.fontLabel(value));
+                            showTip("字体大小已切换为 " + viewModel.fontLabel(value));
                         }
                 );
                 break;
@@ -248,7 +249,7 @@ public class SettingsDetailActivity extends AppCompatActivity {
                 showTip(item.value);
                 break;
             case SettingsViewModel.KEY_ADD_BLACKLIST:
-                showSingleInputDialog("添加黑名单", "输入需要拦截的扣扣号。", "10位扣扣号", "", InputType.TYPE_CLASS_NUMBER, value -> {
+                showSingleInputDialog("添加黑名单", "输入需要拦截的扣扣号。", "10 位扣扣号", "", InputType.TYPE_CLASS_NUMBER, value -> {
                     if (value.length() != 10) {
                         showTip("扣扣号必须为 10 位数字");
                         return;
@@ -276,11 +277,23 @@ public class SettingsDetailActivity extends AppCompatActivity {
         SettingsState state = viewModel.getSettingsState().getValue();
         boolean enabled = state != null && state.localPasscodeEnabled;
         if (enabled) {
-            showSingleInputDialog("关闭本地密码", "输入当前本地密码以关闭保护。", "当前本地密码", "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD, value ->
-                    viewModel.clearLocalPasscode(value, simpleCallback()));
+            showSingleInputDialog(
+                    "关闭本地密码",
+                    "输入当前本地密码以关闭保护。",
+                    "当前本地密码",
+                    "",
+                    InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD,
+                    value -> viewModel.clearLocalPasscode(value, simpleCallback())
+            );
         } else {
-            showSingleInputDialog("开启本地密码", "设置一个 4 位以上的本地密码。", "输入本地密码", "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD, value ->
-                    viewModel.saveLocalPasscode(value, simpleCallback()));
+            showSingleInputDialog(
+                    "开启本地密码",
+                    "设置一个 4 位以上的本地密码。",
+                    "输入本地密码",
+                    "",
+                    InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD,
+                    value -> viewModel.saveLocalPasscode(value, simpleCallback())
+            );
         }
     }
 

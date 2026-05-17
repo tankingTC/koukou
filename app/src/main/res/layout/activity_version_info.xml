@@ -50,7 +50,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_max="@dimen/content_max_width"
         app:navigationIcon="@android:drawable/ic_menu_revert"
-        app:title="版本更新记录"
+        app:title="版本更新日志"
         app:titleTextColor="@color/butterfly_text_primary" />
 
     <ScrollView

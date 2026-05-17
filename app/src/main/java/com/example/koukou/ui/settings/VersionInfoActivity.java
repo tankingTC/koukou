@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivityVersionInfoBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.utils.AppearanceManager;
 
 import org.json.JSONArray;
@@ -95,7 +96,13 @@ public class VersionInfoActivity extends AppCompatActivity {
     }
 
     private void observeAppearance() {
-        settingsRepository.getSettingsLiveData().observe(this,
-                state -> AppearanceManager.applyPageAppearance(this, getWindow(), binding.getRoot(), state));
+        settingsRepository.getSettingsLiveData().observe(this, state -> {
+            AppearanceManager.applyPageAppearance(this, getWindow(), binding.getRoot(), state);
+            ThemePalette palette = AppearanceManager.paletteOf(state);
+            binding.toolbar.setTitleTextColor(palette.textPrimary);
+            binding.toolbar.setNavigationIconTint(palette.iconPrimary);
+            binding.tvChangelog.setBackgroundResource(palette.bgGlassCard);
+            binding.tvChangelog.setTextColor(palette.textSecondary);
+        });
     }
 }

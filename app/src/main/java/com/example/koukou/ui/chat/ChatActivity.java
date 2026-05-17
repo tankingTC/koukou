@@ -19,11 +19,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.koukou.R;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivityChatBinding;
+import com.example.koukou.ui.settings.model.SettingsState;
 import com.example.koukou.utils.AppearanceManager;
 import com.example.koukou.utils.IridescenceAnimator;
 import com.example.koukou.utils.UserHelper;
 import com.example.koukou.widget.RaindropFxView;
-import com.example.koukou.ui.settings.model.SettingsState;
 
 public class ChatActivity extends AppCompatActivity {
     public static final String EXTRA_TARGET_ID = "target_id";
@@ -173,7 +173,7 @@ public class ChatActivity extends AppCompatActivity {
         binding.etInput.setOnFocusChangeListener((v, hasFocus) -> updateInputSurface(hasFocus));
         IridescenceAnimator.setupClickFeedback(binding.btnSend);
         binding.btnSend.setOnClickListener(v -> {
-            String text = binding.etInput.getText().toString();
+            String text = binding.etInput.getText() == null ? "" : binding.etInput.getText().toString();
             if (!text.trim().isEmpty()) {
                 viewModel.sendMessage(text);
                 binding.etInput.setText("");
@@ -216,6 +216,11 @@ public class ChatActivity extends AppCompatActivity {
                 });
             }
         });
+        viewModel.getFeedbackLiveData().observe(this, feedback -> {
+            if (feedback != null && feedback.message != null && !feedback.message.trim().isEmpty()) {
+                showTip(feedback.message);
+            }
+        });
     }
 
     private void observeAppearance() {
@@ -243,11 +248,11 @@ public class ChatActivity extends AppCompatActivity {
         boolean stardust = currentAppearanceState != null && "stardust".equals(currentAppearanceState.chatBackground);
         boolean active = stardust && currentAppearanceState.immersiveEffectsEnabled && focused;
         binding.layoutInput.setBackgroundResource(active ? palette.bgInputBarActive : palette.bgInputBar);
-        
+
         if (focused && active) {
             IridescenceAnimator.startInputEdgeTrace(binding.layoutInput);
         }
-        
+
         binding.layoutInput.animate().cancel();
         binding.layoutInput.animate()
                 .scaleX(active ? 1.01f : 1f)

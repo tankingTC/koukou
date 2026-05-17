@@ -75,7 +75,9 @@ public class ContactAdapter extends ListAdapter<UserEntity, ContactAdapter.ViewH
 
         void bind(UserEntity entity) {
             binding.tvName.setText(entity.nickname != null && !entity.nickname.isEmpty() ? entity.nickname : entity.userId);
-            binding.tvSignature.setText(entity.signature != null && !entity.signature.isEmpty() ? entity.signature : "这个人很神秘，暂未留下签名");
+            binding.tvSignature.setText(entity.signature != null && !entity.signature.isEmpty()
+                    ? entity.signature
+                    : "这个人很神秘，暂未留下签名");
 
             AvatarHelper.loadAvatar(binding.ivAvatar, entity.avatarUrl);
             ThemePalette palette = AppearanceManager.currentPalette(binding.getRoot().getContext());

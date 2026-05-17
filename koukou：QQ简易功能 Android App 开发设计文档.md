@@ -1,6 +1,6 @@
 # koukou：QQ 简易功能 Android App 开发设计文档
 
-本文档以当前仓库真实代码为准，描述 `koukou` 项目的 Android 客户端、服务端接口接入方式、数据层设计、页面结构以及主题系统。目标是方便后续继续开发、联调和维护。
+本文档以当前仓库真实代码为准，描述 `koukou` 项目的 Android 客户端、服务端接入方式、数据层设计、页面结构、主题系统以及当前联调状态，便于后续继续开发、联调与维护。
 
 ## 1. 项目概览
 
@@ -10,7 +10,7 @@
 - 服务端技术栈：`Node.js + Express + ws + MySQL + JWT`
 - 当前整体架构：`MVVM + Repository + Room + HTTP API + WebSocket + DataStore`
 
-当前仓库已经不是纯本地单机版本，而是包含完整“客户端 + 服务器”结构：
+当前仓库包含完整的客户端与服务端：
 
 - `app/`：Android 客户端
 - `koukou-server/`：即时通讯服务端
@@ -20,31 +20,38 @@
 ### 2.1 基础构建
 
 - AGP：`9.0.1`
-- Gradle：`9.2.1`
 - compileSdk：`36`
 - minSdk：`24`
 - targetSdk：`36`
 - Java：`17`
-- ViewBinding：开启
-- BuildConfig：开启
+- ViewBinding：已开启
+- BuildConfig：已开启
 
 ### 2.2 当前版本
 
-- `versionCode = 2`
-- `versionName = 1.1.0`
+- `versionCode = 3`
+- `versionName = 1.1.1`
 
 ### 2.3 当前网络地址
 
-当前 `debug / release` 都指向云服务器：
+当前客户端配置为双线路：
 
 ```text
 API_BASE_URL=https://zzj.abrdns.com
+API_BASE_URL_BACKUP=https://120.26.247.39
 WS_URL=wss://zzj.abrdns.com/ws
+WS_URL_BACKUP=wss://120.26.247.39/ws
 ```
 
-### 2.4 必要权限
+说明：
 
-客户端当前已声明：
+- 主线路优先使用域名
+- 当 HTTPS / WSS 链路异常时，客户端会自动尝试备用 IP
+- 该策略已接入注册、登录、联系人接口与 WebSocket
+
+### 2.4 Android 权限
+
+当前客户端已声明：
 
 - `android.permission.INTERNET`
 - `android.permission.ACCESS_NETWORK_STATE`
@@ -73,9 +80,12 @@ app/src/main/java/com/example/koukou/
 │  │  └─ KoukouApiService.java
 │  ├─ model/
 │  │  └─ WebSocketMessage.java
-│  └─ websocket/
-│     ├─ AppWebSocketListener.java
-│     └─ WebSocketManager.java
+│  ├─ websocket/
+│  │  ├─ AppWebSocketListener.java
+│  │  └─ WebSocketManager.java
+│  ├─ ServerEndpointPolicy.java
+│  └─ UnsafeTlsSupport.java
+├─ theme/
 ├─ ui/
 │  ├─ chat/
 │  ├─ contacts/
@@ -104,14 +114,18 @@ koukou-server/
 
 服务端当前提供：
 
-- 健康检查 `/health`
-- 注册 `/api/register`
-- 登录 `/api/login`
-- 生成可用扣扣号 `/api/users/available-id`
-- 用户查询 `/api/users/:id`
-- 好友列表 `/api/friends`
-- 好友申请 `/api/friends/requests`
-- WebSocket `/ws`
+- `GET /health`
+- `POST /api/register`
+- `POST /api/login`
+- `GET /api/users/available-id`
+- `GET /api/users/:id`
+- `GET /api/friends`
+- `GET /api/friends/requests`
+- `POST /api/friends/requests`
+- `POST /api/friends/requests/:requestId/accept`
+- `POST /api/friends/requests/:requestId/reject`
+- `DELETE /api/friends/:friendId`
+- `WS /ws`
 
 ## 5. 页面结构
 
@@ -154,11 +168,11 @@ koukou-server/
 - 展示 UI
 - 接收用户操作
 - 观察 ViewModel 状态
-- 承载主题与动效表现
+- 承载主题与动效
 
 ### 6.2 ViewModel 层
 
-主要包括：
+主要包含：
 
 - `LoginViewModel`
 - `ConversationsViewModel`
@@ -171,11 +185,11 @@ koukou-server/
 - 组织页面状态
 - 与 Repository 交互
 - 暴露 LiveData
-- 将设置和数据转换成页面可直接消费的模型
+- 将底层数据转换为页面可直接消费的状态模型
 
 ### 6.3 Repository 层
 
-主要包括：
+主要包含：
 
 - `UserRepository`
 - `ContactRepository`
@@ -185,7 +199,7 @@ koukou-server/
 
 职责：
 
-- 聚合本地数据库、远程 API、WebSocket、DataStore
+- 聚合 Room、远程 API、WebSocket、DataStore
 - 屏蔽线程切换
 - 对上层提供统一业务接口
 
@@ -197,7 +211,7 @@ koukou-server/
 
 - `AppDatabase`
 
-当前核心实体：
+核心实体：
 
 - `UserEntity`
 - `FriendEntity`
@@ -205,32 +219,35 @@ koukou-server/
 - `ConversationEntity`
 - `MessageEntity`
 
-当前数据库仍使用开发阶段友好的：
+当前数据库仍使用：
 
 - `fallbackToDestructiveMigration`
 
+说明：适合当前开发联调阶段，后续正式化时建议补显式 Migration。
+
 ### 7.2 DataStore
 
-`SettingsRepository` 已统一托管以下键值配置：
+`SettingsRepository` 当前统一托管：
 
-- 通知开关
-- 声音 / 振动 / 预览 / 免打扰
+- 通知总开关
+- 声音 / 震动 / 预览 / 免打扰
 - 本地密码保护
 - 好友验证方式
 - 是否允许通过扣扣号搜索
 - 主题模式
 - 聊天背景
 - 字体大小
-- 沉浸动效开关
+- 沉浸流光动效
 - 黑名单
 
 ### 7.3 SharedPreferences
 
-`UserHelper` 当前仍负责缓存以下轻量登录态信息：
+`UserHelper` 当前负责缓存轻量登录态：
 
 - 当前账号
 - 当前密码
 - 当前用户 ID
+- 当前 JWT token
 - 当前昵称
 - 当前头像
 - 当前签名
@@ -246,6 +263,7 @@ koukou-server/
 - 系统可随机生成唯一 10 位扣扣号
 - 也支持手动输入 10 位扣扣号
 - 通过 `KoukouApiService.register()` 调用服务端注册
+- 注册成功后写入 Room，并把账号密码回填到登录页
 
 ### 8.2 登录
 
@@ -253,26 +271,24 @@ koukou-server/
 
 - 使用扣扣号 + 密码登录
 - 通过 `KoukouApiService.login()` 调用服务端
-- 登录成功后将用户资料同步为本地 `UserEntity`
-- 同时保存历史账号、昵称、头像、签名
+- 成功后同步到 Room
+- 同时保存历史账号、昵称、头像、JWT token
 
 ### 8.3 登录后主链路
 
 登录成功后：
 
 1. 跳转 `MainActivity`
-2. `MessageRepository` 设置当前用户上下文
-3. `MainActivity` 读取当前 `userId`
-4. `WebSocketManager.connect(currentUserId)` 建立实时连接
-5. 连接成功后触发：
-   - 离线消息同步
-   - 待发送消息重发
+2. `UserHelper` 中保存当前 token
+3. `MainActivity` 优先读取 token 建立 WebSocket
+4. 若无 token，则回退到开发期 userId token 逻辑
+5. `MessageRepository` 负责 ACK、离线同步和消息落库
 
-## 9. 服务器接入设计
+## 9. 远程接口与通信设计
 
 ### 9.1 HTTP API
 
-客户端 API 入口：
+客户端远程接口入口：
 
 - `network/api/KoukouApiService`
 
@@ -283,11 +299,21 @@ koukou-server/
 - 生成可用扣扣号
 - 根据扣扣号查询用户
 - 拉取好友列表
-- 拉取好友申请列表
-- 发送 / 接受 / 拒绝好友申请
+- 拉取好友申请
+- 发起/接受/拒绝好友申请
 - 删除好友
 
-### 9.2 WebSocket
+### 9.2 双线路兜底策略
+
+`KoukouApiService` 当前已支持：
+
+- 主域名请求失败后自动切换备用 IP
+- 对备用 IP 启用宽松 TLS 兼容
+- 区分网络异常、证书异常、超时、服务器不可达
+
+这套机制的主要目的，是避免主域名链路异常时，注册/登录直接全部失效。
+
+### 9.3 WebSocket
 
 客户端 WebSocket 入口：
 
@@ -307,50 +333,59 @@ koukou-server/
 - `heartbeat_ping`
 - `heartbeat_pong`
 
-### 9.3 本次稳定性修复
+### 9.4 WebSocket 稳定性修复
 
-针对“服务器部署后登录成功立即闪退”的问题，当前代码已经补上：
+针对“服务端部署后登录成功立即闪退”和“主域名不稳定导致连接失败”的问题，当前代码已经补上：
 
-- Android 网络权限
-- WebSocket 启动异常保护
-- `WS_URL` / token 拼接安全处理
+- WebSocket 主域名 + 备用 IP 双线路连接
+- URL 与 token 拼接安全处理
+- 连接启动异常保护
 - 回调分发异常保护
-- 消息落库异常保护
-- 离线同步与重发逻辑保护
-
-修复目标是：即使服务端数据不规范或连接失败，也不能再把客户端直接拖崩。
+- 消息解析异常保护
+- 自动重连与心跳保活
 
 ## 10. 会话、联系人与聊天
 
 ### 10.1 联系人模块
 
-`ContactsFragment + ContactRepository` 负责：
+`ContactsFragment + ContactRepository` 当前负责：
 
-- 拉取好友列表
+- 拉取远程好友列表
 - 展示好友申请
 - 添加好友
-- 处理好友申请
+- 通过/拒绝好友申请
 - 删除好友
 - 跳转好友资料页
 
+说明：
+
+- 当前联系人模块已具备在线操作能力
+- 好友申请状态更多依赖页面刷新/返回时同步
+- 客户端尚未完整消费 `friend_request` 和 `friend_request_status` 的实时推送
+
 ### 10.2 会话模块
 
-`ConversationsFragment + ConversationRepository` 负责：
+`ConversationsFragment + ConversationRepository` 当前负责：
 
 - 会话列表
 - 未读数展示
-- 会话状态更新
+- 会话摘要刷新
 
 ### 10.3 聊天模块
 
-`ChatActivity + MessageRepository` 负责：
+`ChatActivity + MessageRepository` 当前负责：
 
 - 本地消息插入
 - 通过 WebSocket 发送消息
 - ACK 回执更新
-- 接收服务端推送消息
-- 离线消息同步后落库
+- 接收实时消息
+- 离线消息同步
 - 会话摘要同步更新
+
+说明：
+
+- 已成为好友的两个账号当前可以在线单聊
+- 聊天错误码的即时 UI 提示仍可继续加强
 
 ## 11. 设置中心
 
@@ -369,7 +404,7 @@ koukou-server/
 
 ### 11.2 设置二级页
 
-统一由 `SettingsDetailActivity` 承载，页面配置来源于：
+由 `SettingsDetailActivity` 统一承载，页面配置来源于：
 
 - `SettingsPage`
 - `SettingsItem`
@@ -410,7 +445,7 @@ koukou-server/
 
 ### 12.3 覆盖范围
 
-当前主题系统已经覆盖：
+当前主题系统已覆盖：
 
 - 登录页
 - 注册页
@@ -433,21 +468,43 @@ koukou-server/
 
 - `VersionInfoActivity`
 
-## 14. 构建与联调
+版本展示依赖：
 
-### 14.1 Android 构建
+- `app/build.gradle.kts` 中的 `versionName`
+
+## 14. 当前联调状态
+
+### 14.1 已打通部分
+
+- 服务器健康检查
+- 注册 / 登录 API
+- JWT 返回与客户端保存
+- WebSocket 建连
+- 消息发送、ACK、离线同步
+- 远程好友列表与好友申请接口
+
+### 14.2 当前真实状态说明
+
+项目已经具备在线好友与在线聊天的主链路，但还不等于“全部实时闭环”：
+
+- 在线聊天：基本可用
+- 在线添加好友：可在线操作，但实时推送消费仍可继续补齐
+
+## 15. 构建与调试
+
+### 15.1 Android 构建
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-输出 APK：
+APK 输出：
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### 14.2 服务端启动
+### 15.2 服务端启动
 
 ```bash
 cd koukou-server
@@ -455,27 +512,26 @@ npm install
 npm run start
 ```
 
-### 14.3 云服务器联调重点
+### 15.3 云服务器联调重点
 
-当服务器已部署但客户端登录后出现问题时，优先检查：
+优先检查：
 
-- `API_BASE_URL`
-- `WS_URL`
+- `API_BASE_URL` / `API_BASE_URL_BACKUP`
+- `WS_URL` / `WS_URL_BACKUP`
 - Android 网络权限
 - `/api/login` 返回字段是否完整
 - `/ws` 是否可连接
-- 服务端首帧 `sync_response / chat_message` 是否与客户端字段兼容
+- 服务端 `sync_response / chat_message` 是否与客户端字段兼容
 
-## 15. 当前阶段重点
+## 16. 后续建议
 
-当前项目已从“单机功能演示”进入“客户端 + 服务端联调 + 主题系统深化”阶段，后续重点应放在：
-
-- 远程登录与本地缓存的一致性
-- WebSocket 稳定性与离线同步
-- 数据迁移与长期可维护性
-- 主题统一性和页面布局稳定性
+- 补齐好友申请相关 WebSocket 实时消费
+- 为消息错误码增加即时 UI 提示
+- 为 Room 增加显式 Migration
+- 收敛旧的乱码文案资源与异常提示
+- 继续统一主题组件尺寸、间距与浅/深色适配
 
 ---
 
-文档更新时间：2026-05-13  
-文档依据：当前仓库实际代码结构、现有页面、服务端接口与已落地功能
+文档更新时间：2026-05-17  
+文档依据：当前仓库实际代码结构、现有页面、服务端接口、主题系统与最新联调修复内容

@@ -17,14 +17,11 @@ public class ChatViewModel extends ViewModel {
 
     public ChatViewModel(MessageRepository repository) {
         this.repository = repository;
-
-        messages = Transformations.switchMap(currentTargetId, targetId -> 
-                repository.getMessages(targetId)
-        );
+        this.messages = Transformations.switchMap(currentTargetId, repository::getMessages);
     }
 
     public void setTargetId(String targetId) {
-        if (!targetId.equals(currentTargetId.getValue())) {
+        if (targetId != null && !targetId.equals(currentTargetId.getValue())) {
             currentTargetId.setValue(targetId);
         }
     }
@@ -33,13 +30,17 @@ public class ChatViewModel extends ViewModel {
         return messages;
     }
 
+    public LiveData<MessageRepository.UiFeedback> getFeedbackLiveData() {
+        return repository.getFeedbackLiveData();
+    }
+
     public void sendMessage(String content) {
         sendMessage(content, "text", null);
     }
 
     public void sendMessage(String content, String msgType, String localPath) {
         String targetId = currentTargetId.getValue();
-        if (targetId != null && !content.trim().isEmpty()) {
+        if (targetId != null && content != null && !content.trim().isEmpty()) {
             repository.sendMessage(targetId, content, msgType, localPath, "single");
         }
     }

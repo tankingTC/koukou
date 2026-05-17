@@ -1,11 +1,11 @@
 package com.example.koukou.network.websocket;
 
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.example.koukou.BuildConfig;
+import com.example.koukou.network.ServerEndpointPolicy;
+import com.example.koukou.network.UnsafeTlsSupport;
 import com.example.koukou.network.model.WebSocketMessage;
 import com.google.gson.Gson;
 
@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -25,20 +26,22 @@ import okhttp3.WebSocketListener;
 public class WebSocketManager {
     private static final String TAG = "WebSocketManager";
     private static volatile WebSocketManager INSTANCE;
-    
-    private final OkHttpClient client;
-    private WebSocket webSocket;
-    private final Gson gson = new Gson();
 
+    private final OkHttpClient standardClient;
+    private final OkHttpClient fallbackClient;
+    private final Gson gson = new Gson();
     private final List<AppWebSocketListener> listeners = new ArrayList<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Handler socketHandler = new Handler(Looper.getMainLooper());
 
+    private WebSocket webSocket;
     private boolean isConnected = false;
     private boolean manuallyClosed = false;
     private String authToken;
     private int reconnectAttempts = 0;
     private int missedPongs = 0;
+    private List<String> candidateUrls = Collections.emptyList();
+    private int currentCandidateIndex = 0;
 
     private final Runnable heartbeatRunnable = new Runnable() {
         @Override
@@ -61,10 +64,15 @@ public class WebSocketManager {
     };
 
     private WebSocketManager() {
-        client = new OkHttpClient.Builder()
+        standardClient = new OkHttpClient.Builder()
                 .readTimeout(0, TimeUnit.SECONDS)
                 .writeTimeout(10, TimeUnit.SECONDS)
                 .pingInterval(30, TimeUnit.SECONDS)
+                .build();
+        fallbackClient = UnsafeTlsSupport.apply(new OkHttpClient.Builder()
+                        .readTimeout(0, TimeUnit.SECONDS)
+                        .writeTimeout(10, TimeUnit.SECONDS)
+                        .pingInterval(30, TimeUnit.SECONDS))
                 .build();
     }
 
@@ -96,39 +104,84 @@ public class WebSocketManager {
     public void connect(String token) {
         authToken = token == null ? null : token.trim();
         manuallyClosed = false;
+        reconnectAttempts = 0;
+        candidateUrls = ServerEndpointPolicy.webSocketUrls(authToken);
+        connectToCandidate(0);
+    }
+
+    public void disconnect() {
+        manuallyClosed = true;
+        stopHeartbeat();
+        if (webSocket != null) {
+            webSocket.close(1000, "User disconnected");
+            webSocket = null;
+        }
+        isConnected = false;
+        notifyDisconnect();
+    }
+
+    public boolean sendMessage(WebSocketMessage message) {
+        if (webSocket != null && isConnected) {
+            return webSocket.send(gson.toJson(message));
+        }
+        return false;
+    }
+
+    public boolean isConnected() {
+        return isConnected;
+    }
+
+    private void connectToCandidate(int index) {
+        currentCandidateIndex = index;
         stopHeartbeat();
         isConnected = false;
         if (webSocket != null) {
             webSocket.cancel();
             webSocket = null;
         }
-        final String socketUrl;
-        try {
-            socketUrl = buildSocketUrl(authToken);
-        } catch (Exception e) {
-            handleConnectSetupFailure(e);
+
+        if (candidateUrls == null || candidateUrls.isEmpty() || index >= candidateUrls.size()) {
+            notifyConnect(false);
+            notifyDisconnect();
             return;
         }
 
-        final Request request;
+        String socketUrl = candidateUrls.get(index);
+        Request request;
         try {
-            request = new Request.Builder()
-                    .url(socketUrl)
-                    .build();
+            request = new Request.Builder().url(socketUrl).build();
         } catch (Exception e) {
-            handleConnectSetupFailure(e);
+            Log.e(TAG, "Invalid websocket url: " + socketUrl, e);
+            if (!tryNextCandidate()) {
+                notifyConnect(false);
+                notifyDisconnect();
+            }
             return;
         }
 
+        OkHttpClient activeClient = ServerEndpointPolicy.requiresUnsafeTls(socketUrl) ? fallbackClient : standardClient;
         try {
-            webSocket = client.newWebSocket(request, new WebSocketListener() {
+            webSocket = activeClient.newWebSocket(request, createListener(index, socketUrl));
+        } catch (Exception e) {
+            Log.e(TAG, "WebSocket startup failed for " + socketUrl, e);
+            if (!tryNextCandidate()) {
+                notifyConnect(false);
+                notifyDisconnect();
+            }
+        }
+    }
+
+    private WebSocketListener createListener(int candidateIndex, String socketUrl) {
+        return new WebSocketListener() {
             @Override
             public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
                 isConnected = true;
                 reconnectAttempts = 0;
                 missedPongs = 0;
+                currentCandidateIndex = candidateIndex;
                 startHeartbeat();
                 notifyConnect(true);
+                Log.i(TAG, "WebSocket connected via " + socketUrl);
             }
 
             @Override
@@ -149,7 +202,7 @@ public class WebSocketManager {
                 isConnected = false;
                 stopHeartbeat();
                 notifyDisconnect();
-                if (!manuallyClosed) {
+                if (!manuallyClosed && !tryNextCandidate()) {
                     scheduleReconnect();
                 }
             }
@@ -159,57 +212,21 @@ public class WebSocketManager {
                 isConnected = false;
                 stopHeartbeat();
                 notifyDisconnect();
-                if (!manuallyClosed) {
+                Log.e(TAG, "WebSocket failure on " + socketUrl, t);
+                if (!manuallyClosed && !tryNextCandidate()) {
                     scheduleReconnect();
                 }
             }
-            });
-        } catch (Exception e) {
-            handleConnectSetupFailure(e);
-        }
+        };
     }
 
-    public void disconnect() {
-        manuallyClosed = true;
-        stopHeartbeat();
-        if (webSocket != null) {
-            webSocket.close(1000, "User disconnected");
-            webSocket = null;
+    private boolean tryNextCandidate() {
+        int nextIndex = currentCandidateIndex + 1;
+        if (candidateUrls == null || nextIndex >= candidateUrls.size()) {
+            return false;
         }
-        isConnected = false;
-        notifyDisconnect();
-    }
-
-    public boolean sendMessage(WebSocketMessage message) {
-        if (webSocket != null && isConnected) {
-            String json = gson.toJson(message);
-            return webSocket.send(json);
-        }
-        return false;
-    }
-
-    public boolean isConnected() {
-        return isConnected;
-    }
-
-    private String buildSocketUrl(String token) {
-        String baseUrl = BuildConfig.WS_URL == null ? "" : BuildConfig.WS_URL.trim();
-        if (baseUrl.isEmpty()) {
-            throw new IllegalStateException("WS_URL is empty");
-        }
-        if (token == null || token.trim().isEmpty()) {
-            return baseUrl;
-        }
-        String separator = baseUrl.contains("?") ? "&" : "?";
-        return baseUrl + separator + "token=" + Uri.encode(token.trim());
-    }
-
-    private void handleConnectSetupFailure(Exception exception) {
-        isConnected = false;
-        stopHeartbeat();
-        Log.e(TAG, "WebSocket startup failed", exception);
-        notifyConnect(false);
-        notifyDisconnect();
+        socketHandler.post(() -> connectToCandidate(nextIndex));
+        return true;
     }
 
     private void startHeartbeat() {
@@ -240,7 +257,8 @@ public class WebSocketManager {
         reconnectAttempts += 1;
         socketHandler.postDelayed(() -> {
             if (!manuallyClosed && !isConnected) {
-                connect(authToken);
+                candidateUrls = ServerEndpointPolicy.webSocketUrls(authToken);
+                connectToCandidate(0);
             }
         }, delay);
     }

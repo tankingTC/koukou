@@ -36,8 +36,11 @@ public interface MessageDao {
     @Query("UPDATE messages SET status = :status WHERE messageId = :msgId")
     void updateMessageStatus(String msgId, String status);
 
-    @Query("UPDATE messages SET status = :status, serverMessageId = :serverMessageId, serverTimestamp = :serverTimestamp WHERE clientMessageId = :clientMessageId")
+    @Query("UPDATE messages SET status = :status, serverMessageId = :serverMessageId, serverTimestamp = :serverTimestamp, lastErrorCode = NULL, lastErrorMessage = NULL WHERE clientMessageId = :clientMessageId")
     void applyAck(String clientMessageId, String serverMessageId, String status, long serverTimestamp);
+
+    @Query("UPDATE messages SET status = :status, lastErrorCode = :errorCode, lastErrorMessage = :errorMessage WHERE messageId = :messageId")
+    void updateMessageFailure(String messageId, String status, String errorCode, String errorMessage);
 
     @Query("UPDATE messages SET status = :status, retryCount = retryCount + 1, timestamp = :timestamp WHERE messageId = :messageId")
     void markRetrying(String messageId, String status, long timestamp);

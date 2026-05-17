@@ -23,6 +23,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.koukou.data.local.AppDatabase;
+import com.example.koukou.data.repository.ContactRepository;
 import com.example.koukou.data.repository.MessageRepository;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivityMainBinding;
@@ -44,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private ObjectAnimator navAmbientAnimator;
     private SettingsState currentAppearanceState;
     private BadgeDrawable conversationBadge;
+    private BadgeDrawable contactsBadge;
     private boolean localPasscodeUnlocked = false;
     private boolean localPasscodeDialogShowing = false;
 
@@ -70,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
         AppDatabase db = AppDatabase.getInstance(this);
         convDao = db.conversationDao();
+        ContactRepository.getInstance(this, db.friendDao(), db.friendRequestDao(), db.userDao(), AppExecutors.getInstance());
 
         MessageRepository repo = MessageRepository.getInstance(
                 db.messageDao(),
@@ -129,6 +132,13 @@ public class MainActivity extends AppCompatActivity {
                         : ContextCompat.getColor(this, R.color.butterfly_cyan);
                 conversationBadge.setBackgroundColor(badgeBg);
                 conversationBadge.setBadgeTextColor(Color.WHITE);
+            }
+            if (contactsBadge != null) {
+                int badgeBg = palette.navBadgeColor != 0
+                        ? palette.navBadgeColor
+                        : ContextCompat.getColor(this, R.color.butterfly_cyan);
+                contactsBadge.setBackgroundColor(badgeBg);
+                contactsBadge.setBadgeTextColor(Color.WHITE);
             }
             binding.navAmbientGlow.setBackgroundResource(stardust
                     ? R.drawable.bg_bottom_nav_stardust_pulse
@@ -243,6 +253,10 @@ public class MainActivity extends AppCompatActivity {
         conversationBadge = binding.bottomNav.getOrCreateBadge(R.id.nav_conversations);
         conversationBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.butterfly_cyan));
         conversationBadge.setBadgeTextColor(ContextCompat.getColor(this, R.color.butterfly_bg));
+        contactsBadge = binding.bottomNav.getOrCreateBadge(R.id.nav_contacts);
+        contactsBadge.setBackgroundColor(ContextCompat.getColor(this, R.color.butterfly_cyan));
+        contactsBadge.setBadgeTextColor(ContextCompat.getColor(this, R.color.butterfly_bg));
+        contactsBadge.setVisible(false);
         if (currentUserId != null && !currentUserId.isEmpty()) {
             convDao.getTotalUnreadCount(currentUserId).observe(this, count -> {
                 if (count != null && count > 0) {
@@ -251,6 +265,15 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     conversationBadge.setVisible(false);
                     conversationBadge.clearNumber();
+                }
+            });
+            AppDatabase.getInstance(this).friendRequestDao().observePendingIncomingCount(currentUserId).observe(this, count -> {
+                if (count != null && count > 0) {
+                    contactsBadge.setVisible(true);
+                    contactsBadge.setNumber(count);
+                } else {
+                    contactsBadge.setVisible(false);
+                    contactsBadge.clearNumber();
                 }
             });
         }

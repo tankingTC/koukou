@@ -37,7 +37,7 @@ public class UserRepository {
     public void login(String account, String password, Callback callback) {
         appExecutors.networkIO().execute(() -> {
             try {
-                String loginAccount = account == null ? "" : account.trim();
+                String loginAccount = safe(account);
                 KoukouApiService.AuthResult remote = apiService.login(loginAccount, password);
                 UserEntity user = remote.toUserEntity(password);
                 persistUser(user);
@@ -51,7 +51,7 @@ public class UserRepository {
             } catch (IOException ioException) {
                 loginLocal(account, password, callback);
             } catch (Exception e) {
-                appExecutors.mainThread().execute(() -> callback.onError("登录异常: " + e.getMessage()));
+                appExecutors.mainThread().execute(() -> callback.onError("登录异常：" + safe(e.getMessage(), "未知错误")));
             }
         });
     }
@@ -59,7 +59,7 @@ public class UserRepository {
     public void register(String nickname, String preferredKoukouId, String password, Callback callback) {
         appExecutors.networkIO().execute(() -> {
             try {
-                String normalizedNickname = nickname == null ? "" : nickname.trim();
+                String normalizedNickname = safe(nickname);
                 if (normalizedNickname.isEmpty()) {
                     appExecutors.mainThread().execute(() -> callback.onError("昵称不能为空"));
                     return;
@@ -73,9 +73,10 @@ public class UserRepository {
             } catch (KoukouApiService.ApiException apiError) {
                 appExecutors.mainThread().execute(() -> callback.onError(mapRegisterApiError(apiError)));
             } catch (IOException ioException) {
-                appExecutors.mainThread().execute(() -> callback.onError("无法连接服务器，请检查网络后重试"));
+                String message = KoukouApiService.describeNetworkError(ioException);
+                appExecutors.mainThread().execute(() -> callback.onError(message));
             } catch (Exception e) {
-                appExecutors.mainThread().execute(() -> callback.onError("注册异常: " + e.getMessage()));
+                appExecutors.mainThread().execute(() -> callback.onError("注册异常：" + safe(e.getMessage(), "未知错误")));
             }
         });
     }
@@ -89,10 +90,10 @@ public class UserRepository {
                 } catch (Exception ignored) {
                     koukouId = generateRandomUniqueKoukouId();
                 }
-                final String finalKoukouId = koukouId;
+                String finalKoukouId = koukouId;
                 appExecutors.mainThread().execute(() -> callback.onSuccess(finalKoukouId));
             } catch (Exception e) {
-                appExecutors.mainThread().execute(() -> callback.onError("生成扣扣号失败: " + e.getMessage()));
+                appExecutors.mainThread().execute(() -> callback.onError("生成扣扣号失败：" + safe(e.getMessage(), "未知错误")));
             }
         });
     }
@@ -110,18 +111,15 @@ public class UserRepository {
             }
 
             String oldAccount = user.account;
-            String displayName = nickname == null ? "" : nickname.trim();
+            String displayName = safe(nickname, user.nickname);
             if (displayName.isEmpty()) {
-                displayName = user.nickname;
-            }
-            if (displayName == null || displayName.isEmpty()) {
                 displayName = "扣扣用户";
             }
 
             user.nickname = displayName;
             user.account = user.userId;
             user.avatarUrl = avatarUrl;
-            user.signature = signature == null || signature.trim().isEmpty() ? DEFAULT_SIGNATURE : signature.trim();
+            user.signature = safe(signature, DEFAULT_SIGNATURE);
             userDao.insertUser(user);
 
             appExecutors.mainThread().execute(() -> {
@@ -137,7 +135,7 @@ public class UserRepository {
     private void loginLocal(String account, String password, Callback callback) {
         appExecutors.diskIO().execute(() -> {
             try {
-                String loginAccount = account == null ? "" : account.trim();
+                String loginAccount = safe(account);
                 UserEntity user = userDao.getUser(loginAccount);
                 if (user == null) {
                     user = userDao.getUserByAccount(loginAccount);
@@ -156,7 +154,7 @@ public class UserRepository {
                 UserEntity finalUser = user;
                 appExecutors.mainThread().execute(() -> callback.onSuccess(finalUser));
             } catch (Exception e) {
-                appExecutors.mainThread().execute(() -> callback.onError("登录异常: " + e.getMessage()));
+                appExecutors.mainThread().execute(() -> callback.onError("登录异常：" + safe(e.getMessage(), "未知错误")));
             }
         });
     }
@@ -221,7 +219,7 @@ public class UserRepository {
     }
 
     private String generateRandomKoukouId() {
-        long randomId = (long) (Math.random() * 9000000000L) + 1000000000L;
+        long randomId = (long) (Math.random() * 9_000_000_000L) + 1_000_000_000L;
         return String.valueOf(randomId);
     }
 
@@ -236,17 +234,26 @@ public class UserRepository {
         if ("invalid_credentials".equals(apiError.errorCode)) {
             return "扣扣号或密码错误";
         }
-        return "服务器登录失败: " + apiError.getMessage();
+        if ("unauthorized".equals(apiError.errorCode)) {
+            return "登录状态无效，请重新登录";
+        }
+        return "服务器登录失败：" + safe(apiError.getMessage(), "未知错误");
     }
 
     private String mapRegisterApiError(KoukouApiService.ApiException apiError) {
         if (apiError == null) {
             return "注册失败";
         }
-        if (apiError.httpCode == 409 || apiError.httpCode == 400 || "user_exists".equals(apiError.errorCode)) {
+        if (apiError.httpCode == 409 || "user_exists".equals(apiError.errorCode)) {
             return "该扣扣号已被注册，请更换后重试";
         }
-        return "服务器注册失败: " + apiError.getMessage();
+        if ("invalid_account_format".equals(apiError.errorCode)) {
+            return "扣扣号必须是 10 位数字";
+        }
+        if ("account_and_password_required".equals(apiError.errorCode)) {
+            return "请完整填写扣扣号和密码";
+        }
+        return "服务器注册失败：" + safe(apiError.getMessage(), "未知错误");
     }
 
     private String safe(String value) {

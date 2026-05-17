@@ -16,15 +16,17 @@ public class MessageEntity {
 
     public String clientMessageId;
     public String serverMessageId;
-    public String conversationId; // 关联的会话ID
+    public String conversationId;
     public String senderId;
     public String receiverId;
     public String content;
-    public String msgType; // "text", "image", "video", "emoji"
-    public String localPath; // URI string for local image/video
+    public String msgType;
+    public String localPath;
     public long timestamp;
-    public String chatType; // "single" 或 "group"
-    public String status;   // "sending", "sent", "read", "failed"
+    public String chatType;
+    public String status;
+    public String lastErrorCode;
+    public String lastErrorMessage;
     public boolean isRead;
     public int retryCount;
     public long serverTimestamp;

@@ -16,12 +16,12 @@ public class ContactsViewModel extends ViewModel {
     private final LiveData<Integer> pendingIncomingCountLiveData;
     private final String currentUserId;
 
-    public ContactsViewModel(ContactRepository repository, String account) {    
+    public ContactsViewModel(ContactRepository repository, String currentUserId) {
         this.repository = repository;
-        this.currentUserId = account;
-        contactsLiveData = repository.getContacts(account);
-        incomingRequestsLiveData = repository.getIncomingRequests(account);
-        pendingIncomingCountLiveData = repository.getPendingIncomingCount(account);
+        this.currentUserId = currentUserId;
+        contactsLiveData = repository.getContacts(currentUserId);
+        incomingRequestsLiveData = repository.getIncomingRequests(currentUserId);
+        pendingIncomingCountLiveData = repository.getPendingIncomingCount(currentUserId);
     }
 
     public LiveData<List<UserEntity>> getContacts() {
@@ -36,12 +36,16 @@ public class ContactsViewModel extends ViewModel {
         return pendingIncomingCountLiveData;
     }
 
-    public void addFriend(String myAccount, String friendAccount, ContactRepository.Callback callback) {
-        repository.addFriend(myAccount, friendAccount, callback);
-    }
-
     public void refreshRemoteState(ContactRepository.Callback callback) {
         repository.refreshRemoteState(currentUserId, callback);
+    }
+
+    public void searchUser(String identifier, ContactRepository.UserLookupCallback callback) {
+        repository.searchUser(identifier, callback);
+    }
+
+    public void addFriend(String friendAccount, ContactRepository.Callback callback) {
+        repository.addFriend(currentUserId, friendAccount, callback);
     }
 
     public void acceptFriendRequest(String requestId, ContactRepository.Callback callback) {
@@ -52,7 +56,7 @@ public class ContactsViewModel extends ViewModel {
         repository.rejectFriendRequest(currentUserId, requestId, callback);
     }
 
-    public void deleteFriend(String myUserId, String friendId, ContactRepository.Callback callback) {
-        repository.deleteFriend(myUserId, friendId, callback);
+    public void deleteFriend(String friendId, ContactRepository.Callback callback) {
+        repository.deleteFriend(currentUserId, friendId, callback);
     }
 }

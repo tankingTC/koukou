@@ -56,6 +56,7 @@
         android:layout_width="@dimen/avatar_md"
         android:layout_height="@dimen/avatar_md"
         android:background="@drawable/bg_butterfly_panel"
+        android:contentDescription="返回"
         android:padding="@dimen/space_sm"
         android:src="@android:drawable/ic_menu_revert"
         app:layout_constraintStart_toStartOf="parent"

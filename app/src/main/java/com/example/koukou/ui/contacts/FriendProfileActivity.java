@@ -14,6 +14,7 @@ import com.example.koukou.data.local.AppDatabase;
 import com.example.koukou.data.repository.ContactRepository;
 import com.example.koukou.data.repository.SettingsRepository;
 import com.example.koukou.databinding.ActivityFriendProfileBinding;
+import com.example.koukou.theme.ThemePalette;
 import com.example.koukou.ui.chat.ChatActivity;
 import com.example.koukou.utils.AppExecutors;
 import com.example.koukou.utils.AppearanceManager;
@@ -47,9 +48,9 @@ public class FriendProfileActivity extends AppCompatActivity {
         targetAvatar = getIntent().getStringExtra(EXTRA_AVATAR);
         String signature = getIntent().getStringExtra(EXTRA_SIGNATURE);
 
-        binding.tvProfileNickname.setText(targetName);
-        binding.tvProfileQQ.setText("扣扣号 " + targetId);
-        binding.tvSignatureDetail.setText(signature != null && !signature.isEmpty() ? signature : "这个人很神秘，暂未留下签名");
+        binding.tvProfileNickname.setText(targetName != null && !targetName.trim().isEmpty() ? targetName : "好友");
+        binding.tvProfileQQ.setText("扣扣号 " + (targetId == null ? "" : targetId));
+        binding.tvSignatureDetail.setText(signature != null && !signature.trim().isEmpty() ? signature : "这个人很神秘，暂未留下签名");
         AvatarHelper.loadAvatar(binding.ivBigAvatar, targetAvatar);
 
         setupBackHandling();
@@ -120,6 +121,21 @@ public class FriendProfileActivity extends AppCompatActivity {
     private void observeAppearance() {
         settingsRepository.getSettingsLiveData().observe(this, state -> {
             AppearanceManager.applyPageAppearance(this, getWindow(), binding.getRoot(), state);
+            ThemePalette palette = AppearanceManager.paletteOf(state);
+            binding.ivBack.setBackgroundResource(palette.bgPanel);
+            binding.ivBack.setColorFilter(palette.iconPrimary);
+            binding.cvAvatar.setStrokeColor(palette.cardStroke);
+            binding.cvAvatar.setStrokeWidth((int) (getResources().getDisplayMetrics().density));
+            binding.tvProfileNickname.setTextColor(palette.textPrimary);
+            binding.tvProfileQQ.setTextColor(palette.textSecondary);
+            binding.vDivider.setBackgroundColor(palette.cardStroke);
+            binding.llInfoList.setBackgroundResource(palette.bgGlassCard);
+            binding.tvSignatureDetail.setTextColor(palette.textPrimary);
+            binding.tvShare.setBackgroundResource(palette.bgPanel);
+            binding.tvShare.setTextColor(palette.textPrimary);
+            binding.tvDeleteFriend.setBackgroundResource(palette.bgPanel);
+            binding.tvDeleteFriend.setTextColor(getResources().getColor(R.color.butterfly_danger));
+            binding.tvSendMessage.setBackgroundResource(R.drawable.bg_button_gradient_20);
             AppearanceManager.applyEffectState(null, null, binding.ivDecor, state, () -> {
                 IridescenceAnimator.startHeroFloat(binding.ivDecor);
                 IridescenceAnimator.startDreamscape(binding.ivDecor);

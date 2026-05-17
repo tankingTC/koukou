@@ -93,6 +93,7 @@
             android:layout_height="@dimen/button_icon_size"
             android:layout_gravity="end|center_vertical"
             android:background="@drawable/bg_butterfly_panel"
+            android:contentDescription="添加好友"
             android:padding="@dimen/space_sm"
             android:src="@android:drawable/ic_menu_add"
             app:tint="@color/butterfly_text_primary" />

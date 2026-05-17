@@ -22,6 +22,7 @@
         android:rotation="-18" />
 
     <LinearLayout
+        android:id="@+id/layout_dialog_card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_butterfly_glass_card"
@@ -42,7 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_sm"
-            android:text="输入 10 位扣扣号，沿着流光找到你的好友。"
+            android:text="输入 10 位扣扣号，先查找资料，再发送好友申请。"
             android:textColor="@color/butterfly_text_secondary"
             android:textSize="13sp" />
 
@@ -74,17 +75,93 @@
                 android:layout_height="@dimen/button_secondary_height"
                 android:background="@drawable/bg_profile_btn_outline"
                 android:gravity="center"
-                android:minWidth="88dp"
+                android:minWidth="84dp"
                 android:paddingHorizontal="@dimen/space_md"
                 android:text="申请"
                 android:textColor="@color/butterfly_text_primary"
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/btn_cancel"
+                android:id="@+id/btn_search"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/button_secondary_height"
                 android:layout_marginStart="@dimen/space_sm"
+                android:background="@drawable/bg_profile_btn_outline"
+                android:gravity="center"
+                android:minWidth="84dp"
+                android:paddingHorizontal="@dimen/space_md"
+                android:text="查找"
+                android:textColor="@color/butterfly_text_primary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_user_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:background="@drawable/bg_butterfly_list_card"
+            android:gravity="center_vertical"
+            android:minHeight="@dimen/list_item_double_height"
+            android:orientation="horizontal"
+            android:padding="@dimen/card_inner_padding"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/iv_preview_avatar"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:scaleType="centerCrop" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_md"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_preview_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="等待查找"
+                    android:textColor="@color/butterfly_text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_preview_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:text="扣扣号"
+                    android:textColor="@color/butterfly_cyan"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tv_preview_signature"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:text="查找到用户后，这里会显示个性签名。"
+                    android:textColor="@color/butterfly_text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_cancel"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_secondary_height"
                 android:background="@drawable/bg_profile_btn_outline"
                 android:gravity="center"
                 android:minWidth="88dp"
@@ -100,9 +177,9 @@
                 android:layout_marginStart="@dimen/space_sm"
                 android:background="@drawable/bg_button_gradient_20"
                 android:gravity="center"
-                android:minWidth="88dp"
+                android:minWidth="100dp"
                 android:paddingHorizontal="@dimen/space_md"
-                android:text="添加"
+                android:text="发送申请"
                 android:textColor="@color/butterfly_pearl"
                 android:textSize="14sp"
                 android:textStyle="bold" />
